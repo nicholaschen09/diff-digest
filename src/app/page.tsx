@@ -118,7 +118,7 @@ export default function Home() {
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0 justify-center">
             <button
-              className="px-5 py-3 bg-gradient-to-r from-zinc-700 to-zinc-800 text-white rounded-md hover:from-zinc-600 hover:to-zinc-700 transition-all shadow-md disabled:opacity-50 font-medium"
+              className="px-5 py-3 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-all shadow-md disabled:opacity-50 font-medium"
               onClick={handleFetchClick}
               disabled={isLoading}
             >
@@ -137,7 +137,7 @@ export default function Home() {
 
             {diffs.length > 0 && (
               <button
-                className="px-5 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-md hover:from-blue-500 hover:to-blue-600 transition-all shadow-md disabled:opacity-50 font-medium"
+                className="px-5 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-500 transition-all shadow-md disabled:opacity-50 font-medium"
                 onClick={handleBatchGenerateClick}
                 disabled={isBatchGenerating || isLoading}
               >
