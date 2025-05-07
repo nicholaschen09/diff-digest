@@ -104,7 +104,8 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center p-4 sm:p-12">
-      <h1 className="text-4xl font-bold mb-8">Diff Digest ✍️</h1>
+      <h1 className="text-4xl font-bold mb-2">Diff Digest</h1>
+      <p className="text-gray-600 dark:text-gray-400 mb-8 text-center">Website that turns git diffs into live, dual-tone release notes</p>
 
       <div className="w-full max-w-4xl">
         {/* Controls Section */}
