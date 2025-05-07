@@ -12,9 +12,10 @@ interface DiffCardProps {
 interface NoteState {
     devNote: string;
     marketingNote: string;
+    isVisible: boolean;
 }
 
-const DiffCard = forwardRef<{ generateNotes: () => Promise<void> }, DiffCardProps>(
+const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: () => void }, DiffCardProps>(
     ({ id, description, diff, url }, ref) => {
         const [isExpanded, setIsExpanded] = useState(false);
         const [isGenerating, setIsGenerating] = useState(false);
@@ -23,17 +24,18 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void> }, DiffCardProp
         // Use persisted state for notes to maintain across page refreshes
         const [notes, setNotes] = usePersistedState<NoteState>(`diff-notes-${id}`, {
             devNote: '',
-            marketingNote: ''
+            marketingNote: '',
+            isVisible: true
         });
 
-        const { devNote, marketingNote } = notes;
+        const { devNote, marketingNote, isVisible } = notes;
 
         // Handle streaming from the API
         const handleGenerateNotes = async () => {
             // Skip if already generating
             if (isGenerating) return;
 
-            setNotes({ devNote: '', marketingNote: '' });
+            setNotes({ devNote: '', marketingNote: '', isVisible: true });
             setError(null);
             setIsGenerating(true);
 
@@ -79,7 +81,7 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void> }, DiffCardProp
 
                         if (devEnd === -1) {
                             // Still receiving the developer note
-                            setNotes(prev => ({ ...prev, devNote: receivedText.substring(devStart).trim() }));
+                            setNotes(prev => ({ ...prev, devNote: receivedText.substring(devStart).trim(), isVisible: true }));
                         } else {
                             // Found both tags, can separate the notes
                             receivingDev = false;
@@ -90,13 +92,14 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void> }, DiffCardProp
 
                             setNotes({
                                 devNote: updatedDevNote,
-                                marketingNote: updatedMarketingNote
+                                marketingNote: updatedMarketingNote,
+                                isVisible: true
                             });
                         }
                     } else if (receivingDev) {
-                        setNotes(prev => ({ ...prev, devNote: receivedText.trim() }));
+                        setNotes(prev => ({ ...prev, devNote: receivedText.trim(), isVisible: true }));
                     } else {
-                        setNotes(prev => ({ ...prev, marketingNote: receivedText.trim() }));
+                        setNotes(prev => ({ ...prev, marketingNote: receivedText.trim(), isVisible: true }));
                     }
                 }
             } catch (err) {
@@ -106,9 +109,16 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void> }, DiffCardProp
             }
         };
 
+        // Close notes function - only hide notes, don't clear content
+        const handleCloseNotes = () => {
+            setNotes(prev => ({ ...prev, isVisible: false }));
+            setError(null);
+        };
+
         // Expose methods to parent component
         useImperativeHandle(ref, () => ({
-            generateNotes: handleGenerateNotes
+            generateNotes: handleGenerateNotes,
+            closeNotes: handleCloseNotes
         }));
 
         return (
@@ -178,6 +188,17 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void> }, DiffCardProp
                                 </>
                             )}
                         </button>
+                        {(devNote || marketingNote) && isVisible && (
+                            <button
+                                onClick={handleCloseNotes}
+                                className="px-3 py-1.5 text-xs bg-red-600 text-white rounded-md hover:bg-red-500 transition-all flex items-center"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                                Close Notes
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -187,7 +208,7 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void> }, DiffCardProp
                     </div>
                 )}
 
-                {(devNote || marketingNote || error) && (
+                {(devNote || marketingNote || error) && isVisible && (
                     <div className="p-4">
                         {error && (
                             <div className="text-red-400 bg-red-900/20 p-3 rounded-md mb-4 border border-red-800/30 text-sm">
