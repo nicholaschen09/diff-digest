@@ -19,6 +19,11 @@ interface ApiResponse {
   perPage: number;
 }
 
+// Type for the DiffCard ref methods
+interface DiffCardRefMethods {
+  generateNotes: () => Promise<void>;
+}
+
 export default function Home() {
   const [diffs, setDiffs] = useState<DiffItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -26,18 +31,14 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [nextPage, setNextPage] = useState<number | null>(null);
   const [initialFetchDone, setInitialFetchDone] = useState<boolean>(false);
-  const [selectedRepoOwner, setSelectedRepoOwner] = useState<string>('openai');
-  const [selectedRepo, setSelectedRepo] = useState<string>('openai-node');
   const [isBatchGenerating, setIsBatchGenerating] = useState<boolean>(false);
-  const diffCardRefs = useRef<Record<string, { generateNotes: () => Promise<void> }>>({});
+  const diffCardRefs = useRef<Record<string, DiffCardRefMethods>>({});
 
   const fetchDiffs = async (page: number) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(
-        `/api/sample-diffs?page=${page}&per_page=10&owner=${selectedRepoOwner}&repo=${selectedRepo}`
-      );
+      const response = await fetch(`/api/sample-diffs?page=${page}&per_page=10`);
       if (!response.ok) {
         let errorMsg = `HTTP error! status: ${response.status}`;
         try {
@@ -82,8 +83,9 @@ export default function Home() {
     try {
       // Process PRs one at a time to avoid overloading the API
       for (const id of Object.keys(diffCardRefs.current)) {
-        if (diffCardRefs.current[id]?.generateNotes) {
-          await diffCardRefs.current[id].generateNotes();
+        const refMethods = diffCardRefs.current[id];
+        if (refMethods) {
+          await refMethods.generateNotes();
         }
       }
     } catch (error) {
@@ -94,8 +96,10 @@ export default function Home() {
   };
 
   // Register a ref for a DiffCard component
-  const registerDiffCard = (id: string, methods: { generateNotes: () => Promise<void> }) => {
-    diffCardRefs.current[id] = methods;
+  const registerDiffCard = (id: string, methods: DiffCardRefMethods | null) => {
+    if (methods) {
+      diffCardRefs.current[id] = methods;
+    }
   };
 
   return (
@@ -105,35 +109,6 @@ export default function Home() {
       <div className="w-full max-w-4xl">
         {/* Controls Section */}
         <div className="mb-8 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
-            <div className="flex-1">
-              <label htmlFor="repo-owner" className="block text-sm font-medium mb-1">
-                Repository Owner
-              </label>
-              <input
-                id="repo-owner"
-                type="text"
-                value={selectedRepoOwner}
-                onChange={(e) => setSelectedRepoOwner(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm"
-                placeholder="e.g. openai"
-              />
-            </div>
-            <div className="flex-1">
-              <label htmlFor="repo-name" className="block text-sm font-medium mb-1">
-                Repository Name
-              </label>
-              <input
-                id="repo-name"
-                type="text"
-                value={selectedRepo}
-                onChange={(e) => setSelectedRepo(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm"
-                placeholder="e.g. openai-node"
-              />
-            </div>
-          </div>
-
           <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
@@ -189,7 +164,7 @@ export default function Home() {
                   description={item.description}
                   diff={item.diff}
                   url={item.url}
-                  ref={(methods) => methods && registerDiffCard(item.id, methods)}
+                  ref={(methods) => registerDiffCard(item.id, methods)}
                 />
               ))}
             </div>

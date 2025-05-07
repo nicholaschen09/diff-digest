@@ -13,8 +13,8 @@ const DEFAULT_REPO = 'openai-node';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const owner = process.env.GITHUB_OWNER || searchParams.get('owner') || DEFAULT_OWNER;
-    const repo = process.env.GITHUB_REPO || searchParams.get('repo') || DEFAULT_REPO;
+    const owner = process.env.GITHUB_OWNER || DEFAULT_OWNER;
+    const repo = process.env.GITHUB_REPO || DEFAULT_REPO;
     const perPageQuery = searchParams.get('per_page');
     const pageQuery = searchParams.get('page');
 
