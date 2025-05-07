@@ -163,17 +163,32 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void> }, DiffCardProp
                             </div>
                         )}
 
-                        {devNote && (
-                            <div className="p-3 bg-zinc-700 rounded">
-                                <h4 className="text-sm font-bold text-blue-300 mb-1">DEVELOPER NOTE</h4>
-                                <p className="text-gray-300">{devNote}</p>
-                            </div>
-                        )}
+                        {(devNote || marketingNote) && (
+                            <div className="bg-zinc-700 rounded overflow-hidden">
+                                <h3 className="text-md font-bold text-white px-3 py-2 bg-zinc-600 border-b border-zinc-800">
+                                    RELEASE NOTES
+                                </h3>
+                                <div className="p-3 space-y-3">
+                                    {devNote && (
+                                        <div>
+                                            <h4 className="text-sm font-bold text-blue-300 mb-1 flex items-center">
+                                                DEVELOPER NOTE
+                                                {isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                            </h4>
+                                            <p className="text-gray-300">{devNote}</p>
+                                        </div>
+                                    )}
 
-                        {marketingNote && (
-                            <div className="p-3 bg-zinc-700 rounded">
-                                <h4 className="text-sm font-bold text-green-300 mb-1">MARKETING NOTE</h4>
-                                <p className="text-gray-300">{marketingNote}</p>
+                                    {marketingNote && (
+                                        <div>
+                                            <h4 className="text-sm font-bold text-green-300 mb-1 flex items-center">
+                                                MARKETING NOTE
+                                                {isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                            </h4>
+                                            <p className="text-gray-300">{marketingNote}</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
