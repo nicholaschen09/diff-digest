@@ -112,7 +112,7 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void> }, DiffCardProp
         }));
 
         return (
-            <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-4 mb-4 bg-white dark:bg-gray-900 shadow-sm">
+            <div className="border border-zinc-700 rounded-lg p-4 mb-4 bg-zinc-800 shadow-sm">
                 <div className="flex justify-between items-start mb-2">
                     <div>
                         <h3 className="text-lg font-semibold">
@@ -120,17 +120,17 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void> }, DiffCardProp
                                 href={url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-600 dark:text-blue-400 hover:underline"
+                                className="text-gray-300 hover:text-white hover:underline"
                             >
                                 PR #{id}
                             </a>
                         </h3>
-                        <p className="text-gray-700 dark:text-gray-300">{description}</p>
+                        <p className="text-gray-400">{description}</p>
                     </div>
                     <div className="flex space-x-2">
                         <button
                             onClick={() => setIsExpanded(!isExpanded)}
-                            className="px-3 py-1 text-xs bg-gray-200 dark:bg-gray-800 rounded hover:bg-gray-300 dark:hover:bg-gray-700"
+                            className="px-3 py-1 text-xs bg-zinc-700 text-gray-300 rounded hover:bg-zinc-600 hover:text-white"
                         >
                             {isExpanded ? 'Hide Details' : 'Show Details'}
                         </button>
@@ -140,8 +140,8 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void> }, DiffCardProp
                             className={cn(
                                 "px-3 py-1 text-xs text-white rounded transition-colors",
                                 isGenerating
-                                    ? "bg-gray-500"
-                                    : "bg-blue-600 hover:bg-blue-700"
+                                    ? "bg-zinc-600"
+                                    : "bg-zinc-700 hover:bg-zinc-600"
                             )}
                         >
                             {isGenerating ? 'Generating...' : 'Generate Notes'}
@@ -150,30 +150,30 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void> }, DiffCardProp
                 </div>
 
                 {isExpanded && (
-                    <div className="mt-3 p-3 bg-gray-100 dark:bg-gray-800 rounded overflow-auto max-h-64 text-xs font-mono">
-                        <pre className="whitespace-pre-wrap break-words">{diff}</pre>
+                    <div className="mt-3 p-3 bg-zinc-900 rounded overflow-auto max-h-64 text-xs font-mono">
+                        <pre className="whitespace-pre-wrap break-words text-gray-300">{diff}</pre>
                     </div>
                 )}
 
                 {(devNote || marketingNote || error) && (
                     <div className="mt-4 space-y-3">
                         {error && (
-                            <div className="text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 p-3 rounded">
+                            <div className="text-red-400 bg-red-900/30 p-3 rounded">
                                 Error: {error}
                             </div>
                         )}
 
                         {devNote && (
-                            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded">
-                                <h4 className="text-sm font-bold text-blue-800 dark:text-blue-300 mb-1">DEVELOPER NOTE</h4>
-                                <p className="text-gray-800 dark:text-gray-200">{devNote}</p>
+                            <div className="p-3 bg-zinc-700 rounded">
+                                <h4 className="text-sm font-bold text-blue-300 mb-1">DEVELOPER NOTE</h4>
+                                <p className="text-gray-300">{devNote}</p>
                             </div>
                         )}
 
                         {marketingNote && (
-                            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded">
-                                <h4 className="text-sm font-bold text-green-800 dark:text-green-300 mb-1">MARKETING NOTE</h4>
-                                <p className="text-gray-800 dark:text-gray-200">{marketingNote}</p>
+                            <div className="p-3 bg-zinc-700 rounded">
+                                <h4 className="text-sm font-bold text-green-300 mb-1">MARKETING NOTE</h4>
+                                <p className="text-gray-300">{marketingNote}</p>
                             </div>
                         )}
                     </div>

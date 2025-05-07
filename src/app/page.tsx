@@ -103,16 +103,16 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-4 sm:p-12">
-      <h1 className="text-4xl font-bold mb-2">Diff Digest</h1>
-      <p className="text-gray-600 dark:text-gray-400 mb-8 text-center">Website that turns git diffs into live, dual-tone release notes</p>
+    <main className="flex min-h-screen flex-col items-center p-4 sm:p-12 bg-zinc-900">
+      <h1 className="text-4xl font-bold mb-2 text-white">Diff Digest</h1>
+      <p className="text-gray-300 mb-8 text-center">Website that turns git diffs into live, dual-tone release notes</p>
 
       <div className="w-full max-w-4xl">
         {/* Controls Section */}
         <div className="mb-8 space-y-4">
           <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
             <button
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="px-4 py-2 bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50"
               onClick={handleFetchClick}
               disabled={isLoading}
             >
@@ -123,7 +123,7 @@ export default function Home() {
 
             {diffs.length > 0 && (
               <button
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50"
                 onClick={handleBatchGenerateClick}
                 disabled={isBatchGenerating || isLoading}
               >
@@ -134,24 +134,24 @@ export default function Home() {
         </div>
 
         {/* Results Section */}
-        <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-6 min-h-[300px] bg-gray-50 dark:bg-gray-800">
-          <h2 className="text-2xl font-semibold mb-4">Merged Pull Requests</h2>
+        <div className="border border-zinc-700 rounded-lg p-6 min-h-[300px] bg-zinc-800">
+          <h2 className="text-2xl font-semibold mb-4 text-white">Merged Pull Requests</h2>
 
           {error && (
-            <div className="text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 p-3 rounded mb-4">
+            <div className="text-red-400 bg-red-900/30 p-3 rounded mb-4">
               Error: {error}
             </div>
           )}
 
           {!initialFetchDone && !isLoading && (
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-400">
               Click the button above to fetch the latest merged pull requests
               from the repository.
             </p>
           )}
 
           {initialFetchDone && diffs.length === 0 && !isLoading && !error && (
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-400">
               No merged pull requests found or fetched.
             </p>
           )}
@@ -173,14 +173,14 @@ export default function Home() {
 
           {isLoading && (
             <div className="flex justify-center items-center my-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-300"></div>
             </div>
           )}
 
           {nextPage && !isLoading && (
             <div className="mt-6 flex justify-center">
               <button
-                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50"
                 onClick={handleLoadMoreClick}
                 disabled={isLoading}
               >
