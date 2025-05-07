@@ -1,6 +1,7 @@
 "use client"; // Mark as a Client Component
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import DiffCard from "@/components/DiffCard";
 
 // Define the expected structure of a diff object
 interface DiffItem {
@@ -25,13 +26,17 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [nextPage, setNextPage] = useState<number | null>(null);
   const [initialFetchDone, setInitialFetchDone] = useState<boolean>(false);
+  const [selectedRepoOwner, setSelectedRepoOwner] = useState<string>('openai');
+  const [selectedRepo, setSelectedRepo] = useState<string>('openai-node');
+  const [isBatchGenerating, setIsBatchGenerating] = useState<boolean>(false);
+  const diffCardRefs = useRef<Record<string, { generateNotes: () => Promise<void> }>>({});
 
   const fetchDiffs = async (page: number) => {
     setIsLoading(true);
     setError(null);
     try {
       const response = await fetch(
-        `/api/sample-diffs?page=${page}&per_page=10`
+        `/api/sample-diffs?page=${page}&per_page=10&owner=${selectedRepoOwner}&repo=${selectedRepo}`
       );
       if (!response.ok) {
         let errorMsg = `HTTP error! status: ${response.status}`;
@@ -72,22 +77,84 @@ export default function Home() {
     }
   };
 
+  const handleBatchGenerateClick = async () => {
+    setIsBatchGenerating(true);
+    try {
+      // Process PRs one at a time to avoid overloading the API
+      for (const id of Object.keys(diffCardRefs.current)) {
+        if (diffCardRefs.current[id]?.generateNotes) {
+          await diffCardRefs.current[id].generateNotes();
+        }
+      }
+    } catch (error) {
+      console.error("Error batch generating notes:", error);
+    } finally {
+      setIsBatchGenerating(false);
+    }
+  };
+
+  // Register a ref for a DiffCard component
+  const registerDiffCard = (id: string, methods: { generateNotes: () => Promise<void> }) => {
+    diffCardRefs.current[id] = methods;
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center p-12 sm:p-24">
-      <h1 className="text-4xl font-bold mb-12">Diff Digest ✍️</h1>
+    <main className="flex min-h-screen flex-col items-center p-4 sm:p-12">
+      <h1 className="text-4xl font-bold mb-8">Diff Digest ✍️</h1>
 
       <div className="w-full max-w-4xl">
         {/* Controls Section */}
-        <div className="mb-8 flex space-x-4">
-          <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
-            onClick={handleFetchClick}
-            disabled={isLoading}
-          >
-            {isLoading && currentPage === 1
-              ? "Fetching..."
-              : "Fetch Latest Diffs"}
-          </button>
+        <div className="mb-8 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
+            <div className="flex-1">
+              <label htmlFor="repo-owner" className="block text-sm font-medium mb-1">
+                Repository Owner
+              </label>
+              <input
+                id="repo-owner"
+                type="text"
+                value={selectedRepoOwner}
+                onChange={(e) => setSelectedRepoOwner(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm"
+                placeholder="e.g. openai"
+              />
+            </div>
+            <div className="flex-1">
+              <label htmlFor="repo-name" className="block text-sm font-medium mb-1">
+                Repository Name
+              </label>
+              <input
+                id="repo-name"
+                type="text"
+                value={selectedRepo}
+                onChange={(e) => setSelectedRepo(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm"
+                placeholder="e.g. openai-node"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+              onClick={handleFetchClick}
+              disabled={isLoading}
+            >
+              {isLoading && currentPage === 1
+                ? "Fetching..."
+                : "Fetch Merged Pull Requests"}
+            </button>
+
+            {diffs.length > 0 && (
+              <button
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50"
+                onClick={handleBatchGenerateClick}
+                disabled={isBatchGenerating || isLoading}
+              >
+                {isBatchGenerating ? "Generating for all..." : "Generate Notes for All"}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Results Section */}
@@ -114,32 +181,28 @@ export default function Home() {
           )}
 
           {diffs.length > 0 && (
-            <ul className="space-y-3 list-disc list-inside">
+            <div className="space-y-4">
               {diffs.map((item) => (
-                <li key={item.id} className="text-gray-800 dark:text-gray-200">
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    PR #{item.id}:
-                  </a>
-                  <span className="ml-2">{item.description}</span>
-                  {/* We won't display the full diff here, just the description */}
-                </li>
+                <DiffCard
+                  key={item.id}
+                  id={item.id}
+                  description={item.description}
+                  diff={item.diff}
+                  url={item.url}
+                  ref={(methods) => methods && registerDiffCard(item.id, methods)}
+                />
               ))}
-            </ul>
+            </div>
           )}
 
-          {isLoading && currentPage > 1 && (
-            <p className="text-gray-600 dark:text-gray-400 mt-4">
-              Loading more...
-            </p>
+          {isLoading && (
+            <div className="flex justify-center items-center my-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
           )}
 
           {nextPage && !isLoading && (
-            <div className="mt-6">
+            <div className="mt-6 flex justify-center">
               <button
                 className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors disabled:opacity-50"
                 onClick={handleLoadMoreClick}
