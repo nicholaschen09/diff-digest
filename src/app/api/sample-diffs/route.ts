@@ -124,10 +124,10 @@ export async function GET(request: Request) {
         });
 
         // Filter for merged PRs
-        const mergedPrs = closedPrs.filter(pr => pr.merged_at);
+        const mergedPrs = closedPrs.filter((pr: { merged_at: string | null }) => pr.merged_at);
 
         // Fetch diffs for each merged PR in parallel
-        const diffsPromises = mergedPrs.map(async (pr) => {
+        const diffsPromises = mergedPrs.map(async (pr: { number: number; title: string; html_url: string }) => {
             try {
                 const diffResponse = await octokit.pulls.get({
                     owner,
@@ -158,8 +158,8 @@ export async function GET(request: Request) {
         const linkHeader = headers.link;
         let nextPage: number | null = null;
         if (linkHeader) {
-            const links = linkHeader.split(',').map(a => a.split(';'));
-            const nextLink = links.find(link => link[1].includes('rel="next"'));
+            const links = linkHeader.split(',').map((a: string) => a.split(';'));
+            const nextLink = links.find((link: string[]) => link[1].includes('rel="next"'));
             if (nextLink) {
                 const url = new URL(nextLink[0].trim().slice(1, -1));
                 nextPage = parseInt(url.searchParams.get('page') || '0', 10);
