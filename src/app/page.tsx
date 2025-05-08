@@ -1,7 +1,8 @@
 "use client"; // Mark as a Client Component
 
-import { useState, useRef } from "react";
+import { useRef, useEffect } from "react";
 import DiffCard from "@/components/DiffCard";
+import { usePersistedState } from "@/lib/usePersistedState";
 
 // Define the expected structure of a diff object
 interface DiffItem {
@@ -26,14 +27,16 @@ interface DiffCardRefMethods {
 }
 
 export default function Home() {
-  const [diffs, setDiffs] = useState<DiffItem[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [nextPage, setNextPage] = useState<number | null>(null);
-  const [initialFetchDone, setInitialFetchDone] = useState<boolean>(false);
-  const [isBatchGenerating, setIsBatchGenerating] = useState<boolean>(false);
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  // Replace useState with usePersistedState for state that should persist across refreshes
+  const [diffs, setDiffs] = usePersistedState<DiffItem[]>("persisted-diffs", []);
+  const [isLoading, setIsLoading] = usePersistedState<boolean>("persisted-isLoading", false);
+  const [error, setError] = usePersistedState<string | null>("persisted-error", null);
+  const [currentPage, setCurrentPage] = usePersistedState<number>("persisted-currentPage", 1);
+  const [nextPage, setNextPage] = usePersistedState<number | null>("persisted-nextPage", null);
+  const [initialFetchDone, setInitialFetchDone] = usePersistedState<boolean>("persisted-initialFetchDone", false);
+  const [isBatchGenerating, setIsBatchGenerating] = usePersistedState<boolean>("persisted-isBatchGenerating", false);
+  const [isRefreshing, setIsRefreshing] = usePersistedState<boolean>("persisted-isRefreshing", false);
+
   const diffCardRefs = useRef<Record<string, DiffCardRefMethods>>({});
 
   const fetchDiffs = async (page: number) => {
@@ -68,6 +71,15 @@ export default function Home() {
       setIsLoading(false);
     }
   };
+
+  // Use useEffect for auto-fetching to avoid hydration errors
+  useEffect(() => {
+    // Auto-fetch PRs on first load if we have a page number but no diffs
+    // This helps restore state after refresh
+    if (initialFetchDone && diffs.length === 0 && !isLoading && currentPage > 0) {
+      fetchDiffs(currentPage);
+    }
+  }, [initialFetchDone, diffs.length, isLoading, currentPage]);
 
   const handleFetchClick = () => {
     setDiffs([]); // Clear existing diffs when fetching the first page again
