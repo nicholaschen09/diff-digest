@@ -3,6 +3,7 @@
 import { useRef, useEffect, useCallback } from "react";
 import DiffCard from "@/components/DiffCard";
 import { usePersistedState } from "@/lib/usePersistedState";
+import { cn } from "@/lib/utils";
 
 // Define the expected structure of a diff object
 interface DiffItem {
@@ -37,6 +38,8 @@ export default function Home() {
   const [isBatchGenerating, setIsBatchGenerating] = usePersistedState<boolean>("persisted-isBatchGenerating", false);
   const [owner, setOwner] = usePersistedState<string>("persisted-owner", "");
   const [repo, setRepo] = usePersistedState<string>("persisted-repo", "");
+  const [perPage, setPerPage] = usePersistedState<number>("persisted-perPage", 10);
+  const [page, setPage] = usePersistedState<number>("persisted-page", 1);
 
   const diffCardRefs = useRef<Record<string, DiffCardRefMethods>>({});
 
@@ -60,7 +63,7 @@ export default function Home() {
     ]);
   };
 
-  const fetchDiffs = useCallback(async (page: number) => {
+  const fetchDiffs = useCallback(async (pageNum: number) => {
     if (!owner || !repo) {
       setError('Please provide both owner and repo');
       return;
@@ -69,7 +72,7 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = (await fetchWithTimeout(`/api/sample-diffs?owner=${owner}&repo=${repo}&page=${page}`, {}, 10000)) as Response;
+      const response = (await fetchWithTimeout(`/api/sample-diffs?owner=${owner}&repo=${repo}&page=${pageNum}&per_page=${perPage}`, {}, 10000)) as Response;
       const data = await response.json();
 
       if (!response.ok) {
@@ -77,7 +80,7 @@ export default function Home() {
       }
 
       setDiffs((prevDiffs) =>
-        page === 1 ? data.diffs : [...prevDiffs, ...data.diffs]
+        pageNum === 1 ? data.diffs : [...prevDiffs, ...data.diffs]
       );
       setCurrentPage(data.currentPage);
       setNextPage(data.nextPage);
@@ -87,13 +90,13 @@ export default function Home() {
         err instanceof Error ? err.message : "An unknown error occurred"
       );
       // Clear diffs on error to prevent showing stale data
-      if (page === 1) {
+      if (pageNum === 1) {
         setDiffs([]);
       }
     } finally {
       setIsLoading(false);
     }
-  }, [owner, repo, setDiffs, setCurrentPage, setNextPage, setError, setIsLoading, initialFetchDone, setInitialFetchDone]);
+  }, [owner, repo, perPage, setDiffs, setCurrentPage, setNextPage, setError, setIsLoading, initialFetchDone, setInitialFetchDone]);
 
   // Use useEffect for auto-fetching to avoid hydration errors
   useEffect(() => {
@@ -104,7 +107,7 @@ export default function Home() {
 
   const handleFetchClick = () => {
     setDiffs([]); // Clear existing diffs when fetching the first page again
-    fetchDiffs(1);
+    fetchDiffs(page);
   };
 
   const handleBatchGenerateClick = async () => {
@@ -145,45 +148,82 @@ export default function Home() {
 
         {/* Controls Section */}
         <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0 justify-center">
-            <div className="flex flex-col">
-              <label htmlFor="owner" className="text-sm text-gray-400 mb-1">Repository Owner</label>
-              <input
-                id="owner"
-                type="text"
-                value={owner}
-                onChange={(e) => setOwner(e.target.value)}
-                placeholder="e.g., openai"
-                className="px-4 py-2 border border-zinc-700 rounded-md bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          <div className="flex flex-col space-y-4">
+            <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0 justify-center">
+              <div className="flex flex-col">
+                <label htmlFor="owner" className="text-sm text-gray-400 mb-1">Repository Owner</label>
+                <input
+                  id="owner"
+                  type="text"
+                  value={owner}
+                  onChange={(e) => setOwner(e.target.value)}
+                  placeholder="e.g., openai"
+                  className="px-4 py-2 border border-zinc-700 rounded-md bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="repo" className="text-sm text-gray-400 mb-1">Repository Name</label>
+                <input
+                  id="repo"
+                  type="text"
+                  value={repo}
+                  onChange={(e) => setRepo(e.target.value)}
+                  placeholder="e.g., openai-node"
+                  className="px-4 py-2 border border-zinc-700 rounded-md bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="page" className="text-sm text-gray-400 mb-1">Page Number</label>
+                <input
+                  id="page"
+                  type="number"
+                  min="1"
+                  value={page}
+                  onChange={(e) => setPage(Math.max(1, parseInt(e.target.value) || 1))}
+                  placeholder="1"
+                  className="px-4 py-2 border border-zinc-700 rounded-md bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="perPage" className="text-sm text-gray-400 mb-1">Items Per Page</label>
+                <input
+                  id="perPage"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={perPage}
+                  onChange={(e) => setPerPage(Math.min(100, Math.max(1, parseInt(e.target.value) || 10)))}
+                  placeholder="10"
+                  className="px-4 py-2 border border-zinc-700 rounded-md bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
             </div>
-            <div className="flex flex-col">
-              <label htmlFor="repo" className="text-sm text-gray-400 mb-1">Repository Name</label>
-              <input
-                id="repo"
-                type="text"
-                value={repo}
-                onChange={(e) => setRepo(e.target.value)}
-                placeholder="e.g., openai-node"
-                className="px-4 py-2 border border-zinc-700 rounded-md bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex items-end">
+            <div className="flex justify-center">
               <button
-                className="px-5 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-all shadow-md disabled:opacity-50 font-medium"
                 onClick={handleFetchClick}
                 disabled={isLoading}
+                className={cn(
+                  "px-4 py-2 rounded-md text-white font-medium transition-colors",
+                  isLoading
+                    ? "bg-blue-700/70 cursor-wait"
+                    : "bg-blue-600 hover:bg-blue-500"
+                )}
               >
-                {isLoading && currentPage === 1 ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                {isLoading ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-0.5 mr-1.5 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Fetching...
+                    Loading...
                   </span>
                 ) : (
-                  "Fetch Merged Pull Requests"
+                  <span className="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                    </svg>
+                    Fetch PRs
+                  </span>
                 )}
               </button>
             </div>

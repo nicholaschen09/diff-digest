@@ -1,25 +1,59 @@
 import { NextResponse } from 'next/server';
-import { Octokit } from '@octokit/rest';
 
 // Initialize Octokit with proper error handling
-const octokit = new Octokit({
-    auth: process.env.GITHUB_TOKEN || undefined,
-    log: {
-        debug: () => { },
-        info: () => { },
-        warn: console.warn,
-        error: console.error
-    }
-});
+let octokit: any;
+
+async function initializeOctokit() {
+    const { Octokit } = await import('@octokit/rest');
+    octokit = new Octokit({
+        auth: process.env.GITHUB_TOKEN,
+        request: {
+            timeout: 10000
+        }
+    });
+}
 
 // Default repository details (can be overridden by environment variables)
 const DEFAULT_OWNER = 'openai';
 const DEFAULT_REPO = 'openai-node';
+const DEFAULT_PER_PAGE = 10;
 
 export async function GET(request: Request) {
+    // Initialize Octokit if not already initialized
+    if (!octokit) {
+        await initializeOctokit();
+    }
+
+    // Verify GitHub authentication first
+    try {
+        const { data: user } = await octokit.rest.users.getAuthenticated();
+        console.log('Successfully authenticated as:', user.login);
+    } catch (error: any) {
+        console.error('GitHub authentication failed:', error.message);
+        if (error.status === 403) {
+            return NextResponse.json({
+                error: 'GitHub API rate limit exceeded. Please try again later or use a different GitHub token.',
+                details: error.message,
+                diffs: [],
+                nextPage: null,
+                currentPage: 1,
+                perPage: DEFAULT_PER_PAGE
+            }, { status: 403 });
+        }
+        return NextResponse.json({
+            error: 'GitHub authentication failed. Please check your token.',
+            details: error.message,
+            diffs: [],
+            nextPage: null,
+            currentPage: 1,
+            perPage: DEFAULT_PER_PAGE
+        }, { status: 401 });
+    }
+
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const pageQuery = searchParams.get('page');
+    const perPageQuery = searchParams.get('per_page');
     const owner = searchParams.get('owner');
     const repo = searchParams.get('repo');
 
@@ -30,19 +64,31 @@ export async function GET(request: Request) {
             diffs: [],
             nextPage: null,
             currentPage: 1,
-            perPage: 100
+            perPage: DEFAULT_PER_PAGE
         }, { status: 400 });
     }
 
+    // Parse and validate page parameter
     const page = pageQuery ? parseInt(pageQuery, 10) : 1;
-
     if (isNaN(page) || page <= 0) {
         return NextResponse.json({
-            error: 'Invalid page parameter',
+            error: 'Invalid page parameter. Must be a positive number.',
             diffs: [],
             nextPage: null,
             currentPage: page,
-            perPage: 100
+            perPage: DEFAULT_PER_PAGE
+        }, { status: 400 });
+    }
+
+    // Parse and validate per_page parameter
+    const perPage = perPageQuery ? parseInt(perPageQuery, 10) : DEFAULT_PER_PAGE;
+    if (isNaN(perPage) || perPage <= 0 || perPage > 100) {
+        return NextResponse.json({
+            error: 'Invalid per_page parameter. Must be a positive number between 1 and 100.',
+            diffs: [],
+            nextPage: null,
+            currentPage: page,
+            perPage: DEFAULT_PER_PAGE
         }, { status: 400 });
     }
 
@@ -60,7 +106,7 @@ export async function GET(request: Request) {
                     diffs: [],
                     nextPage: null,
                     currentPage: page,
-                    perPage: 100
+                    perPage: perPage
                 }, { status: 404 });
             }
             throw repoError;
@@ -71,7 +117,7 @@ export async function GET(request: Request) {
             owner,
             repo,
             state: 'closed',
-            per_page: 100,
+            per_page: perPage,
             page,
             sort: 'updated',
             direction: 'desc',
@@ -124,7 +170,7 @@ export async function GET(request: Request) {
             diffs: diffResults,
             nextPage: nextPage,
             currentPage: page,
-            perPage: 100
+            perPage: perPage
         });
     } catch (error: any) {
         console.error('Error fetching data from GitHub:', error);
@@ -136,7 +182,7 @@ export async function GET(request: Request) {
                 diffs: [],
                 nextPage: null,
                 currentPage: page,
-                perPage: 100
+                perPage: perPage
             }, { status: 403 });
         }
 
@@ -146,7 +192,7 @@ export async function GET(request: Request) {
                 diffs: [],
                 nextPage: null,
                 currentPage: page,
-                perPage: 100
+                perPage: perPage
             }, { status: 401 });
         }
 
@@ -155,7 +201,7 @@ export async function GET(request: Request) {
             diffs: [],
             nextPage: null,
             currentPage: page,
-            perPage: 100
+            perPage: perPage
         }, { status: error.status || 500 });
     }
 }
