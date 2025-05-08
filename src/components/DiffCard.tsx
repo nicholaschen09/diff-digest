@@ -123,7 +123,7 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
 
         return (
             <div className="border border-zinc-700/50 rounded-lg overflow-hidden bg-zinc-800/70 shadow-lg transition-all hover:shadow-xl">
-                <div className="flex justify-between items-start p-4 bg-gradient-to-r from-zinc-800 to-zinc-900 border-b border-zinc-700/50">
+                <div className="flex justify-between items-start p-4 bg-zinc-800 border-b border-zinc-700/50">
                     <div>
                         <h3 className="text-lg font-semibold flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

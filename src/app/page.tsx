@@ -114,10 +114,10 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-4 sm:p-12 bg-gradient-to-b from-zinc-900 to-zinc-950">
+    <main className="flex min-h-screen flex-col items-center p-4 sm:p-12 bg-zinc-900">
       <div className="max-w-4xl w-full">
         <div className="text-center mb-10">
-          <h1 className="text-5xl font-bold mb-3 text-white bg-clip-text text-transparent bg-gradient-to-r from-gray-200 to-gray-100">
+          <h1 className="text-5xl font-bold mb-3 text-white">
             Diff Digest
           </h1>
           <p className="text-gray-300 text-lg max-w-2xl mx-auto">
