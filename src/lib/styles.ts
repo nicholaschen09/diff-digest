@@ -1,0 +1,1 @@
+export const buttonBaseStyle = "px-3 py-2 text-xs rounded-md transition-all flex items-center justify-center shadow-sm"; 

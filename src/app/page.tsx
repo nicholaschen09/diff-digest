@@ -4,28 +4,8 @@ import { useRef, useEffect, useCallback } from "react";
 import DiffCard from "@/components/DiffCard";
 import { usePersistedState } from "@/lib/usePersistedState";
 import { cn } from "@/lib/utils";
-
-// Define the expected structure of a diff object
-interface DiffItem {
-  id: string;
-  description: string;
-  diff: string;
-  url: string; // Added URL field
-}
-
-// Define the expected structure of the API response
-interface ApiResponse {
-  diffs: DiffItem[];
-  nextPage: number | null;
-  currentPage: number;
-  perPage: number;
-}
-
-// Type for the DiffCard ref methods
-interface DiffCardRefMethods {
-  generateNotes: () => Promise<void>;
-  closeNotes: () => void;
-}
+import type { DiffItem, ApiResponse } from '@/types/api';
+import type { DiffCardRefMethods } from '@/types/diff';
 
 export default function Home() {
   // Replace useState with usePersistedState for state that should persist across refreshes

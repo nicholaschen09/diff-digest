@@ -1,36 +1,9 @@
 import { useState, useImperativeHandle, forwardRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { usePersistedState } from '@/lib/usePersistedState';
-
-interface DiffCardProps {
-    id: string;
-    description: string;
-    diff: string;
-    url: string;
-    owner: string;
-    repo: string;
-}
-
-interface NoteState {
-    devNote: string;
-    marketingNote: string;
-    isVisible: boolean;
-    contributors: string;
-    changes: string;
-    streamProgress: {
-        isGenerating: boolean;
-        receivedText: string;
-        error: string | null;
-    };
-    contributorData?: Array<{
-        login: string;
-        name: string;
-        role: string;
-        avatar_url: string;
-    }>;
-}
-
-const buttonBaseStyle = "px-3 py-2 text-xs rounded-md transition-all flex items-center justify-center shadow-sm";
+import { buttonBaseStyle } from '@/lib/styles';
+import { parseNotes } from '@/lib/noteParser';
+import type { DiffCardProps, NoteState } from '@/types/diff';
 
 const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: () => void }, DiffCardProps>(
     ({ id, description, diff, url, owner, repo }, ref) => {
@@ -212,40 +185,9 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
         // Helper function to parse and update notes state
         const parseAndUpdateNotes = (text: string) => {
             try {
-                // Initialize with empty values
-                let devNote = '';
-                let marketingNote = '';
-                let contributors = '';
-                let changes = '';
+                const { devNote, marketingNote, contributors, changes } = parseNotes(text);
 
-                // Use regex without 's' flag by replacing newlines with a placeholder
-                const processedText = text.replace(/\n/g, ' __NEWLINE__ ');
-
-                // Check for developer notes section
-                const devMatch = processedText.match(/DEVELOPER:\s*(.*?)(?=MARKETING:|$)/);
-                if (devMatch && devMatch[1]) {
-                    devNote = devMatch[1].replace(/__NEWLINE__/g, '\n').trim();
-                }
-
-                // Check for marketing notes section
-                const marketingMatch = processedText.match(/MARKETING:\s*(.*?)(?=CONTRIBUTORS:|$)/);
-                if (marketingMatch && marketingMatch[1]) {
-                    marketingNote = marketingMatch[1].replace(/__NEWLINE__/g, '\n').trim();
-                }
-
-                // Check for contributors section
-                const contributorsMatch = processedText.match(/CONTRIBUTORS:\s*(.*?)(?=CHANGES:|$)/);
-                if (contributorsMatch && contributorsMatch[1]) {
-                    contributors = contributorsMatch[1].replace(/__NEWLINE__/g, '\n').trim();
-                }
-
-                // Check for changes section
-                const changesMatch = processedText.match(/CHANGES:\s*(.*?)$/);
-                if (changesMatch && changesMatch[1]) {
-                    changes = changesMatch[1].replace(/__NEWLINE__/g, '\n').trim();
-                }
-
-                // Update state with parsed values, but preserve isVisible state
+                // Update state with parsed values
                 setNotes(prev => ({
                     ...prev,
                     devNote,
