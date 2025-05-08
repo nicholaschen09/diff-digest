@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Octokit } from '@octokit/rest';
 
 // Default repository settings
 const DEFAULT_OWNER = process.env.GITHUB_OWNER || 'openai';
 const DEFAULT_REPO = process.env.GITHUB_REPO || 'openai-node';
+
+// Initialize Octokit with proper error handling
+const octokit = new Octokit({
+    auth: process.env.GITHUB_TOKEN || undefined,
+    log: {
+        debug: () => { },
+        info: () => { },
+        warn: console.warn,
+        error: console.error
+    }
+});
 
 // Function to extract PR number from URL or ID
 const extractPRNumber = (idOrUrl: string): number | null => {
@@ -20,101 +32,134 @@ const extractPRNumber = (idOrUrl: string): number | null => {
     return null;
 };
 
-// Function to get real contributors from GitHub API
-async function getContributorsFromGitHub(prNumber: number) {
+async function getContributorsFromGitHub(prNumber: string, owner: string, repo: string) {
     try {
-        // Dynamically import octokit to avoid CommonJS/ESM issues
-        const { Octokit } = await import('@octokit/rest');
-
-        const octokit = new Octokit({
-            auth: process.env.GITHUB_TOKEN || '',
+        // First get the PR details to get the author
+        const prResponse = await octokit.pulls.get({
+            owner,
+            repo,
+            pull_number: parseInt(prNumber, 10)
         });
 
-        // Get PR information including author
-        const { data: pr } = await octokit.pulls.get({
-            owner: DEFAULT_OWNER,
-            repo: DEFAULT_REPO,
-            pull_number: prNumber,
-        });
+        const author = prResponse.data.user;
+        const contributors: Array<{
+            login: string;
+            name: string;
+            role: string;
+            avatar_url: string;
+        }> = [];
 
-        // Get all PR commits
-        const { data: commits } = await octokit.pulls.listCommits({
-            owner: DEFAULT_OWNER,
-            repo: DEFAULT_REPO,
-            pull_number: prNumber,
-            per_page: 100,
-        });
-
-        // Extract unique contributors from commits
-        const contributors = new Map();
-
-        // Add PR author
-        if (pr.user) {
-            contributors.set(pr.user.login, {
-                login: pr.user.login,
-                name: pr.user.name || pr.user.login,
+        // Add the PR author
+        if (author) {
+            contributors.push({
+                login: author.login,
+                name: author.name || author.login,
                 role: 'Author',
-                avatar_url: pr.user.avatar_url,
+                avatar_url: author.avatar_url
             });
         }
 
-        // Add committers
-        for (const commit of commits) {
-            if (commit.author) {
-                const login = commit.author.login;
-                if (!contributors.has(login)) {
-                    contributors.set(login, {
-                        login: login,
-                        name: commit.commit.author?.name || login,
-                        role: 'Committer',
-                        avatar_url: commit.author.avatar_url,
-                    });
-                }
-            }
-        }
+        // Get PR reviews to find reviewers
+        const reviewsResponse = await octokit.pulls.listReviews({
+            owner,
+            repo,
+            pull_number: parseInt(prNumber, 10)
+        });
 
-        return Array.from(contributors.values());
-    } catch (error) {
-        console.error('Error fetching contributors from GitHub:', error);
-        return [];
+        // Add unique reviewers
+        const reviewers = new Set();
+        reviewsResponse.data.forEach(review => {
+            if (review.user && !reviewers.has(review.user.login)) {
+                reviewers.add(review.user.login);
+                contributors.push({
+                    login: review.user.login,
+                    name: review.user.name || review.user.login,
+                    role: 'Reviewer',
+                    avatar_url: review.user.avatar_url
+                });
+            }
+        });
+
+        // Get PR commits to find committers
+        const commitsResponse = await octokit.pulls.listCommits({
+            owner,
+            repo,
+            pull_number: parseInt(prNumber, 10)
+        });
+
+        // Add unique committers
+        const committers = new Set();
+        commitsResponse.data.forEach(commit => {
+            if (commit.author && !committers.has(commit.author.login)) {
+                committers.add(commit.author.login);
+                contributors.push({
+                    login: commit.author.login,
+                    name: commit.author.name || commit.author.login,
+                    role: 'Committer',
+                    avatar_url: commit.author.avatar_url
+                });
+            }
+        });
+
+        return contributors;
+    } catch (error: any) {
+        console.error('Error fetching contributors:', error);
+        throw error;
     }
 }
 
 export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const prId = url.searchParams.get('pr');
+    const owner = url.searchParams.get('owner');
+    const repo = url.searchParams.get('repo');
 
-    if (!prId) {
-        return NextResponse.json(
-            { error: 'Missing PR ID or URL' },
-            { status: 400 }
-        );
+    if (!prId || !owner || !repo) {
+        return NextResponse.json({
+            success: false,
+            error: 'Missing required parameters: pr, owner, or repo',
+            contributors: []
+        }, { status: 400 });
     }
 
     try {
-        const prNumber = extractPRNumber(prId);
-
-        if (!prNumber) {
-            return NextResponse.json(
-                { error: 'Invalid PR ID format' },
-                { status: 400 }
-            );
-        }
-
-        const contributors = await getContributorsFromGitHub(prNumber);
-
+        const contributors = await getContributorsFromGitHub(prId, owner, repo);
         return NextResponse.json({
             success: true,
             contributors
         });
-    } catch (error) {
-        console.error('Error fetching contributors:', error);
-        return NextResponse.json(
-            {
-                error: 'Failed to fetch contributors',
-                details: error instanceof Error ? error.message : 'Unknown error'
-            },
-            { status: 500 }
-        );
+    } catch (error: any) {
+        console.error('Error in get-contributors endpoint:', error);
+
+        // Handle specific GitHub API errors
+        if (error.status === 403) {
+            return NextResponse.json({
+                success: false,
+                error: 'GitHub API rate limit exceeded. Please try again later or use a GitHub token.',
+                contributors: []
+            }, { status: 403 });
+        }
+
+        if (error.status === 401) {
+            return NextResponse.json({
+                success: false,
+                error: 'GitHub API authentication failed. Please check your GitHub token.',
+                contributors: []
+            }, { status: 401 });
+        }
+
+        if (error.status === 404) {
+            return NextResponse.json({
+                success: false,
+                error: `Repository or PR not found: ${owner}/${repo}#${prId}`,
+                contributors: []
+            }, { status: 404 });
+        }
+
+        return NextResponse.json({
+            success: false,
+            error: error.message || 'Failed to fetch contributors',
+            contributors: []
+        }, { status: error.status || 500 });
     }
 } 
