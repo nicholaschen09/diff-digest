@@ -5,7 +5,7 @@ import { buttonBaseStyle } from '@/lib/styles';
 import { parseNotes } from '@/lib/noteParser';
 import type { DiffCardProps, NoteState } from '@/types/diff';
 
-const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: () => void }, DiffCardProps>(
+export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: () => void }, DiffCardProps>(
     ({ id, description, diff, url, owner, repo }, ref) => {
         const [isExpanded, setIsExpanded] = usePersistedState<boolean>(`diff-expanded-${id}`, false);
         const [isGenerating, setIsGenerating] = usePersistedState<boolean>(`diff-generating-${id}`, false);
@@ -71,113 +71,82 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
 
         // Handle streaming from the API
         const handleGenerateNotes = async () => {
-            // Skip if already generating
-            if (notes.streamProgress.isGenerating) return;
+            if (!diff) {
+                console.error("No diff content available");
+                return;
+            }
 
-            // Don't clear existing notes, just update them as they come in
+            // Reset any previous errors and set generating state
             setNotes(prev => ({
                 ...prev,
+                isVisible: true,
                 streamProgress: {
-                    ...prev.streamProgress,
+                    isGenerating: true,
+                    receivedText: "",
                     error: null,
-                    isGenerating: true
-                }
+                },
             }));
 
             try {
-                const response = await fetch('/api/generate-notes', {
-                    method: 'POST',
+                const response = await fetch("/api/generate-notes", {
+                    method: "POST",
                     headers: {
-                        'Content-Type': 'application/json',
+                        "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
+                        diff,
+                        owner,
+                        repo,
                         id,
                         description,
-                        diff,
+                        url,
                     }),
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
                 }
 
-                // Process the streaming response
                 const reader = response.body?.getReader();
                 if (!reader) {
-                    throw new Error('ReadableStream not supported');
+                    throw new Error("No reader available");
                 }
 
-                let receivedText = notes.streamProgress.receivedText || '';
-                const abortController = new AbortController();
+                let accumulatedText = "";
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
 
-                // Set a timeout to prevent infinite streaming
-                const timeoutId = setTimeout(() => {
-                    abortController.abort();
+                    const text = new TextDecoder().decode(value);
+                    accumulatedText += text;
+
                     setNotes(prev => ({
                         ...prev,
                         streamProgress: {
                             ...prev.streamProgress,
-                            error: 'Request timed out after 30 seconds. Please try again.',
-                            isGenerating: false
-                        }
+                            receivedText: accumulatedText,
+                        },
                     }));
-                }, 30000);
 
-                try {
-                    // Read the stream
-                    while (true) {
-                        if (abortController.signal.aborted) {
-                            break;
-                        }
-
-                        const { done, value } = await reader.read();
-                        if (done) break;
-
-                        // Decode and append the chunk
-                        const chunk = new TextDecoder().decode(value);
-                        receivedText += chunk;
-
-                        // Update stream progress
-                        setNotes(prev => ({
-                            ...prev,
-                            streamProgress: {
-                                ...prev.streamProgress,
-                                receivedText
-                            }
-                        }));
-
-                        // Parse the received text in a more robust way
-                        parseAndUpdateNotes(receivedText);
-                    }
-                } catch (streamError) {
-                    console.error('Error reading stream:', streamError);
-                    setNotes(prev => ({
-                        ...prev,
-                        streamProgress: {
-                            ...prev.streamProgress,
-                            error: streamError instanceof Error ? streamError.message : 'An unknown error occurred',
-                            isGenerating: false
-                        }
-                    }));
-                } finally {
-                    clearTimeout(timeoutId);
-                    reader.releaseLock();
-                    setNotes(prev => ({
-                        ...prev,
-                        streamProgress: {
-                            ...prev.streamProgress,
-                            isGenerating: false
-                        }
-                    }));
+                    parseAndUpdateNotes(accumulatedText);
                 }
-            } catch (err) {
+            } catch (error) {
+                console.error("Error generating notes:", error);
                 setNotes(prev => ({
                     ...prev,
                     streamProgress: {
                         ...prev.streamProgress,
-                        error: err instanceof Error ? err.message : 'An unknown error occurred',
-                        isGenerating: false
-                    }
+                        error: error instanceof Error ? error.message : "An error occurred",
+                    },
+                }));
+            } finally {
+                setNotes(prev => ({
+                    ...prev,
+                    streamProgress: {
+                        ...prev.streamProgress,
+                        isGenerating: false,
+                    },
                 }));
             }
         };
@@ -211,7 +180,21 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
 
         // Close notes function - only hide notes, don't clear content
         const handleCloseNotes = () => {
-            setNotes(prev => ({ ...prev, isVisible: false }));
+            // Remove the stored data from localStorage
+            localStorage.removeItem(`diff-notes-${id}`);
+            // Reset the state
+            setNotes({
+                devNote: '',
+                marketingNote: '',
+                contributors: '',
+                changes: '',
+                isVisible: false,
+                streamProgress: {
+                    isGenerating: false,
+                    receivedText: '',
+                    error: null,
+                },
+            });
         };
 
         // Expose methods to parent component

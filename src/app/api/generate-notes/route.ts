@@ -12,16 +12,17 @@ const DEFAULT_REPO = process.env.GITHUB_REPO || 'openai-node';
 export const runtime = 'edge';
 
 // Function to extract GitHub issue references from PR description
-const extractIssueReferences = (description: string) => {
+function extractIssueReferences(description: string | undefined): string[] {
+    if (!description) return [];
+
     // Match patterns like #123, fixes #123, closes #123, etc.
     const issueRegex = /#(\d+)/g;
     const matches = description.match(issueRegex);
 
     if (!matches) return [];
 
-    // Extract just the numbers and remove duplicates
-    return [...new Set(matches.map(match => match.replace('#', '')))];
-};
+    return matches.map(match => match.replace('#', ''));
+}
 
 // Function to extract PR number from URL or ID
 const extractPRNumber = (idOrUrl: string): number | null => {
@@ -100,20 +101,21 @@ async function getContributorsFromGitHub(prNumber: number) {
 }
 
 export async function POST(req: NextRequest) {
-    // Get the diff data from the request
-    let { diff, description, id, url } = await req.json();
-
-    if (!diff) {
-        return NextResponse.json(
-            { error: 'Missing diff content' },
-            { status: 400 }
-        );
-    }
-
     try {
+        const { diff, description, id, url } = await req.json();
+
+        if (!diff) {
+            return NextResponse.json(
+                { error: 'No diff content provided' },
+                { status: 400 }
+            );
+        }
+
+        let diffContent = diff;
+
         // Limit diff size if needed to avoid token limits
-        if (diff.length > 50000) {
-            diff = diff.substring(0, 50000) + '... [truncated]';
+        if (diffContent.length > 50000) {
+            diffContent = diffContent.substring(0, 50000) + '... [truncated]';
         }
 
         // Extract related issues from description for context
@@ -124,7 +126,6 @@ export async function POST(req: NextRequest) {
 
         // Get GitHub contributors
         let contributorsContext = 'No specific contributors detected.';
-        let contributorData = [];
         const prNumber = extractPRNumber(id) || extractPRNumber(url || '');
 
         if (prNumber) {
@@ -134,7 +135,6 @@ export async function POST(req: NextRequest) {
                     `${c.name} (@${c.login}) - ${c.role}`
                 ).join(', ');
                 contributorsContext = `Contributors: ${contributorInfo}`;
-                contributorData = contributors;
             }
         }
 
@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
                     },
                     {
                         role: 'user',
-                        content: `Generate release notes for this PR #${id}: "${description}"\n\nContext: ${issuesContext}\n\nContributors Context: ${contributorsContext}\n\nDiff:\n${diff}`
+                        content: `Generate release notes for this PR #${id}: "${description}"\n\nContext: ${issuesContext}\n\nContributors Context: ${contributorsContext}\n\nDiff:\n${diffContent}`
                     }
                 ],
                 stream: true,
