@@ -1,4 +1,4 @@
-import { useState, useImperativeHandle, forwardRef } from 'react';
+import { useState, useImperativeHandle, forwardRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { usePersistedState } from '@/lib/usePersistedState';
 
@@ -15,6 +15,12 @@ interface NoteState {
     isVisible: boolean;
     contributors: string;
     changes: string;
+    contributorData?: Array<{
+        login: string;
+        name: string;
+        role: string;
+        avatar_url: string;
+    }>;
 }
 
 const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: () => void }, DiffCardProps>(
@@ -22,6 +28,7 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
         const [isExpanded, setIsExpanded] = useState(false);
         const [isGenerating, setIsGenerating] = useState(false);
         const [error, setError] = useState<string | null>(null);
+        const [isLoadingContributors, setIsLoadingContributors] = useState(false);
 
         // Use persisted state for notes to maintain across page refreshes
         const [notes, setNotes] = usePersistedState<NoteState>(`diff-notes-${id}`, {
@@ -29,17 +36,56 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
             marketingNote: '',
             isVisible: true,
             contributors: '',
-            changes: ''
+            changes: '',
+            contributorData: []
         });
 
-        const { devNote, marketingNote, isVisible, contributors, changes } = notes;
+        const { devNote, marketingNote, isVisible, contributors, changes, contributorData } = notes;
+
+        // Fetch contributor data when the PR ID is available
+        useEffect(() => {
+            const fetchContributorData = async () => {
+                if (!id || (contributorData && contributorData.length > 0)) return;
+
+                try {
+                    setIsLoadingContributors(true);
+                    const response = await fetch(`/api/get-contributors?pr=${id}`);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (data.success && data.contributors.length > 0) {
+                        setNotes(prev => ({
+                            ...prev,
+                            contributorData: data.contributors
+                        }));
+                    }
+                } catch (err) {
+                    console.error("Error fetching contributors:", err);
+                } finally {
+                    setIsLoadingContributors(false);
+                }
+            };
+
+            fetchContributorData();
+        }, [id, contributorData]);
 
         // Handle streaming from the API
         const handleGenerateNotes = async () => {
             // Skip if already generating
             if (isGenerating) return;
 
-            setNotes({ devNote: '', marketingNote: '', isVisible: true, contributors: '', changes: '' });
+            setNotes(prev => ({
+                ...prev,
+                devNote: '',
+                marketingNote: '',
+                isVisible: true,
+                contributors: '',
+                changes: ''
+            }));
             setError(null);
             setIsGenerating(true);
 
@@ -126,13 +172,14 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                                     const changesStart = contributorsEnd + 'CHANGES:'.length;
                                     const updatedChanges = receivedText.substring(changesStart).trim();
 
-                                    setNotes({
+                                    setNotes(prev => ({
+                                        ...prev,
                                         devNote: updatedDevNote,
                                         marketingNote: updatedMarketingNote,
                                         contributors: updatedContributors,
                                         changes: updatedChanges,
                                         isVisible: true
-                                    });
+                                    }));
                                 }
                             }
                         }
@@ -306,7 +353,7 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                                     )}
 
                                     {/* Contributors section */}
-                                    {contributors && (
+                                    {(contributors || (contributorData && contributorData.length > 0)) && (
                                         <div className="bg-purple-900/10 border border-purple-700/20 rounded-md p-3">
                                             <h4 className="text-sm font-bold text-purple-300 mb-2 flex items-center">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -314,8 +361,29 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                                                 </svg>
                                                 CONTRIBUTORS
                                                 {isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                                {isLoadingContributors && <span className="ml-2 animate-pulse">Loading...</span>}
                                             </h4>
-                                            <p className="text-gray-300 text-sm">{contributors}</p>
+
+                                            {/* Show contributor badges with avatars if available */}
+                                            {contributorData && contributorData.length > 0 ? (
+                                                <div className="text-gray-300 text-sm">
+                                                    {contributorData.map((contributor, index) => (
+                                                        <span
+                                                            key={index}
+                                                            className="inline-flex items-center bg-purple-900/30 rounded-full px-2.5 py-0.5 text-xs font-medium text-purple-100 mr-2 mb-2"
+                                                        >
+                                                            <img
+                                                                src={contributor.avatar_url}
+                                                                alt={contributor.name}
+                                                                className="h-4 w-4 rounded-full mr-1"
+                                                            />
+                                                            {contributor.name} ({contributor.role})
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-gray-300 text-sm">{contributors}</p>
+                                            )}
                                         </div>
                                     )}
 
