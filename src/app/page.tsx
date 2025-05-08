@@ -43,8 +43,7 @@ export default function Home() {
 
   const diffCardRefs = useRef<Record<string, DiffCardRefMethods>>({});
 
-  // Clear persisted state when the app starts
-  useEffect(() => {
+  const clearAllState = () => {
     setDiffs([]);
     setIsLoading(false);
     setError(null);
@@ -52,7 +51,23 @@ export default function Home() {
     setNextPage(null);
     setInitialFetchDone(false);
     setIsBatchGenerating(false);
-  }, []); // Empty dependency array means this runs once when the component mounts
+    setOwner("");
+    setRepo("");
+    setPerPage(10);
+    setPage(1);
+    // Clear all localStorage items that start with "persisted-"
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith("persisted-")) {
+        localStorage.removeItem(key);
+      }
+    });
+    // Clear all localStorage items that start with "diff-"
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith("diff-")) {
+        localStorage.removeItem(key);
+      }
+    });
+  };
 
   const fetchWithTimeout = (url: string, options: RequestInit, timeout = 10000) => {
     return Promise.race([
@@ -198,25 +213,25 @@ export default function Home() {
                 />
               </div>
             </div>
-            <div className="flex justify-center">
+            <div className="flex justify-center space-x-4">
               <button
                 onClick={handleFetchClick}
                 disabled={isLoading}
                 className={cn(
-                  "px-6 py-2.5 rounded-md text-white font-medium transition-all duration-200 flex items-center justify-center min-w-[120px]",
+                  "px-4 py-2 rounded-md transition-all flex items-center justify-center shadow-sm",
                   isLoading
-                    ? "bg-blue-700/70 cursor-wait"
-                    : "bg-blue-600 hover:bg-blue-500 hover:scale-[1.02] active:scale-[0.98]"
+                    ? "bg-blue-700/70 text-white cursor-wait"
+                    : "bg-blue-600 text-white hover:bg-blue-500"
                 )}
               >
                 {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <>
+                    <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span className="animate-pulse">Loading...</span>
-                  </span>
+                    Loading...
+                  </>
                 ) : (
                   <span className="flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -225,6 +240,15 @@ export default function Home() {
                     Fetch PRs
                   </span>
                 )}
+              </button>
+              <button
+                onClick={clearAllState}
+                className="px-4 py-2 rounded-md transition-all flex items-center justify-center shadow-sm bg-red-600 text-white hover:bg-red-500"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Clear All
               </button>
             </div>
           </div>

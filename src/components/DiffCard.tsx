@@ -1,4 +1,4 @@
-import { useState, useImperativeHandle, forwardRef, useEffect } from 'react';
+import { useState, useImperativeHandle, forwardRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { usePersistedState } from '@/lib/usePersistedState';
 
@@ -17,6 +17,11 @@ interface NoteState {
     isVisible: boolean;
     contributors: string;
     changes: string;
+    streamProgress: {
+        isGenerating: boolean;
+        receivedText: string;
+        error: string | null;
+    };
     contributorData?: Array<{
         login: string;
         name: string;
@@ -25,46 +30,37 @@ interface NoteState {
     }>;
 }
 
-const buttonBaseStyle = "px-3 py-2 text-xs rounded-md transition-all flex items-center w-[140px] justify-center shadow-sm";
+const buttonBaseStyle = "px-3 py-2 text-xs rounded-md transition-all flex items-center justify-center shadow-sm";
 
 const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: () => void }, DiffCardProps>(
     ({ id, description, diff, url, owner, repo }, ref) => {
-        const [isExpanded, setIsExpanded] = useState(false);
-        const [isGenerating, setIsGenerating] = useState(false);
-        const [error, setError] = useState<string | null>(null);
-        const [isLoadingContributors, setIsLoadingContributors] = useState(false);
+        const [isExpanded, setIsExpanded] = usePersistedState<boolean>(`diff-expanded-${id}`, false);
+        const [isGenerating, setIsGenerating] = usePersistedState<boolean>(`diff-generating-${id}`, false);
+        const [error, setError] = usePersistedState<string | null>(`diff-error-${id}`, null);
+        const [isLoadingContributors, setIsLoadingContributors] = usePersistedState<boolean>(`diff-loading-contributors-${id}`, false);
 
         // Use persisted state for notes to maintain across page refreshes
         const [notes, setNotes] = usePersistedState<NoteState>(`diff-notes-${id}`, {
             devNote: '',
             marketingNote: '',
-            isVisible: true,
+            isVisible: false,
             contributors: '',
             changes: '',
+            streamProgress: {
+                isGenerating: false,
+                receivedText: '',
+                error: null
+            },
             contributorData: []
         });
 
-        // Clear persisted state when the component mounts
-        useEffect(() => {
-            setNotes({
-                devNote: '',
-                marketingNote: '',
-                isVisible: true,
-                contributors: '',
-                changes: '',
-                contributorData: []
-            });
-        }, []); // Empty dependency array means this runs once when the component mounts
-
-        const { devNote, marketingNote, isVisible, contributors, changes, contributorData } = notes;
-
-        // Fetch contributor data when the PR ID is available
-        const fetchContributorData = async () => {
+        // Memoize fetchContributorData to prevent unnecessary re-renders
+        const fetchContributorData = useCallback(async () => {
             // Add checks to prevent unnecessary fetches
             if (!id ||
                 !owner ||
                 !repo ||
-                (contributorData && contributorData.length > 0) ||
+                (notes.contributorData && notes.contributorData.length > 0) ||
                 isLoadingContributors) {
                 return;
             }
@@ -91,30 +87,29 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
             } finally {
                 setIsLoadingContributors(false);
             }
-        };
+        }, [id, owner, repo, notes.contributorData, isLoadingContributors, setNotes]);
 
-        // Update the useEffect to only run when necessary
+        // Update the useEffect to use the memoized function
         useEffect(() => {
             if (id && owner && repo && !isLoadingContributors) {
                 fetchContributorData();
             }
-        }, [id, owner, repo, isLoadingContributors, contributorData, setNotes]);
+        }, [id, owner, repo, isLoadingContributors, fetchContributorData]);
 
         // Handle streaming from the API
         const handleGenerateNotes = async () => {
             // Skip if already generating
-            if (isGenerating) return;
+            if (notes.streamProgress.isGenerating) return;
 
+            // Don't clear existing notes, just update them as they come in
             setNotes(prev => ({
                 ...prev,
-                devNote: '',
-                marketingNote: '',
-                isVisible: true,
-                contributors: '',
-                changes: ''
+                streamProgress: {
+                    ...prev.streamProgress,
+                    error: null,
+                    isGenerating: true
+                }
             }));
-            setError(null);
-            setIsGenerating(true);
 
             try {
                 const response = await fetch('/api/generate-notes', {
@@ -139,14 +134,20 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                     throw new Error('ReadableStream not supported');
                 }
 
-                let receivedText = '';
-                let abortController = new AbortController();
+                let receivedText = notes.streamProgress.receivedText || '';
+                const abortController = new AbortController();
 
                 // Set a timeout to prevent infinite streaming
                 const timeoutId = setTimeout(() => {
                     abortController.abort();
-                    setError('Request timed out after 30 seconds. Please try again.');
-                    setIsGenerating(false);
+                    setNotes(prev => ({
+                        ...prev,
+                        streamProgress: {
+                            ...prev.streamProgress,
+                            error: 'Request timed out after 30 seconds. Please try again.',
+                            isGenerating: false
+                        }
+                    }));
                 }, 30000);
 
                 try {
@@ -163,20 +164,48 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                         const chunk = new TextDecoder().decode(value);
                         receivedText += chunk;
 
+                        // Update stream progress
+                        setNotes(prev => ({
+                            ...prev,
+                            streamProgress: {
+                                ...prev.streamProgress,
+                                receivedText
+                            }
+                        }));
+
                         // Parse the received text in a more robust way
                         parseAndUpdateNotes(receivedText);
                     }
                 } catch (streamError) {
                     console.error('Error reading stream:', streamError);
-                    setError('Error reading response stream. Please try again.');
+                    setNotes(prev => ({
+                        ...prev,
+                        streamProgress: {
+                            ...prev.streamProgress,
+                            error: streamError instanceof Error ? streamError.message : 'An unknown error occurred',
+                            isGenerating: false
+                        }
+                    }));
                 } finally {
                     clearTimeout(timeoutId);
                     reader.releaseLock();
+                    setNotes(prev => ({
+                        ...prev,
+                        streamProgress: {
+                            ...prev.streamProgress,
+                            isGenerating: false
+                        }
+                    }));
                 }
             } catch (err) {
-                setError(err instanceof Error ? err.message : 'An unknown error occurred');
-            } finally {
-                setIsGenerating(false);
+                setNotes(prev => ({
+                    ...prev,
+                    streamProgress: {
+                        ...prev.streamProgress,
+                        error: err instanceof Error ? err.message : 'An unknown error occurred',
+                        isGenerating: false
+                    }
+                }));
             }
         };
 
@@ -216,7 +245,7 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                     changes = changesMatch[1].replace(/__NEWLINE__/g, '\n').trim();
                 }
 
-                // Update state with parsed values
+                // Update state with parsed values, but preserve isVisible state
                 setNotes(prev => ({
                     ...prev,
                     devNote,
@@ -241,7 +270,6 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
         // Close notes function - only hide notes, don't clear content
         const handleCloseNotes = () => {
             setNotes(prev => ({ ...prev, isVisible: false }));
-            setError(null);
         };
 
         // Expose methods to parent component
@@ -269,43 +297,44 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                         </h3>
                         <p className="text-gray-400 mt-1 text-sm">{description}</p>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex gap-2">
                         <button
                             onClick={() => setIsExpanded(!isExpanded)}
                             className={cn(
                                 buttonBaseStyle,
-                                "bg-zinc-700 text-gray-300 hover:bg-zinc-600 hover:text-white"
+                                "bg-zinc-700 text-white hover:bg-zinc-600 w-[125px]"
                             )}
                         >
                             {isExpanded ? (
-                                <span className="flex items-center">
+                                <>
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" />
+                                        <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
                                     </svg>
                                     Hide Details
-                                </span>
+                                </>
                             ) : (
-                                <span className="flex items-center">
+                                <>
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                                     </svg>
                                     Show Details
-                                </span>
+                                </>
                             )}
                         </button>
                         <button
                             onClick={handleGenerateNotes}
-                            disabled={isGenerating}
+                            disabled={notes.streamProgress.isGenerating}
                             className={cn(
                                 buttonBaseStyle,
-                                isGenerating
+                                notes.streamProgress.isGenerating
                                     ? "bg-blue-700/70 text-white cursor-wait"
-                                    : "bg-blue-600 text-white hover:bg-blue-500"
+                                    : "bg-blue-600 text-white hover:bg-blue-500",
+                                "w-[140px]"
                             )}
                         >
-                            {isGenerating ? (
+                            {notes.streamProgress.isGenerating ? (
                                 <>
-                                    <svg className="animate-spin -ml-0.5 mr-1.5 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <svg className="animate-spin h-3.5 w-3.5 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
@@ -320,7 +349,7 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                                 </>
                             )}
                         </button>
-                        {(devNote || marketingNote) && isVisible && (
+                        {(notes.devNote || notes.marketingNote) && notes.isVisible && (
                             <button
                                 onClick={handleCloseNotes}
                                 className={cn(
@@ -343,129 +372,89 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                     </div>
                 )}
 
-                {(devNote || marketingNote || error) && isVisible && (
+                {notes.isVisible && (
                     <div className="p-4">
-                        {error && (
-                            <div className="text-red-400 bg-red-900/20 p-3 rounded-md mb-4 border border-red-800/30 text-sm">
-                                <div className="flex items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                    </svg>
-                                    <span>Error: {error}</span>
-                                </div>
+                        {notes.streamProgress.error && (
+                            <div className="mb-4 p-3 bg-red-900/20 border border-red-800/30 rounded-md">
+                                <p className="text-red-400 text-sm">{notes.streamProgress.error}</p>
                             </div>
                         )}
 
-                        {(devNote || marketingNote) && (
-                            <div className="bg-zinc-700/50 rounded-lg overflow-hidden shadow-inner">
-                                <div className="bg-zinc-600 px-4 py-2 flex items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    <h3 className="text-sm font-bold text-white">RELEASE NOTES</h3>
-                                    {isGenerating && (
-                                        <span className="ml-2 flex items-center text-xs text-gray-300">
-                                            <span className="relative flex h-2 w-2 mr-1.5">
-                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                                            </span>
-                                            Generating...
-                                        </span>
+                        <div className="space-y-4">
+                            {notes.devNote && (
+                                <div className="bg-blue-900/10 border border-blue-700/20 rounded-md p-3">
+                                    <h4 className="text-sm font-bold text-blue-300 mb-2 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                        </svg>
+                                        DEVELOPER NOTE
+                                        {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                    </h4>
+                                    <p className="text-gray-300 text-sm">{notes.devNote}</p>
+                                </div>
+                            )}
+
+                            {notes.marketingNote && (
+                                <div className="bg-green-900/10 border border-green-700/20 rounded-md p-3">
+                                    <h4 className="text-sm font-bold text-green-300 mb-2 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
+                                        </svg>
+                                        MARKETING NOTE
+                                        {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                    </h4>
+                                    <p className="text-gray-300 text-sm">{notes.marketingNote}</p>
+                                </div>
+                            )}
+
+                            {/* Contributors section */}
+                            {(notes.contributors || (notes.contributorData && notes.contributorData.length > 0)) && (
+                                <div className="bg-purple-900/10 border border-purple-700/20 rounded-md p-3">
+                                    <h4 className="text-sm font-bold text-purple-300 mb-2 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                        </svg>
+                                        CONTRIBUTORS
+                                        {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                        {isLoadingContributors && <span className="ml-2 animate-pulse">Loading...</span>}
+                                    </h4>
+
+                                    {/* Show contributor badges with avatars if available */}
+                                    {notes.contributorData && notes.contributorData.length > 0 ? (
+                                        <div className="text-gray-300 text-sm">
+                                            {notes.contributorData.map((contributor, index) => (
+                                                <span
+                                                    key={index}
+                                                    className="inline-flex items-center bg-purple-900/30 rounded-full px-2.5 py-0.5 text-xs font-medium text-purple-100 mr-2 mb-2"
+                                                >
+                                                    <img
+                                                        src={contributor.avatar_url}
+                                                        alt={contributor.login}
+                                                        className="w-4 h-4 rounded-full mr-1.5"
+                                                    />
+                                                    {contributor.name} (@{contributor.login})
+                                                </span>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-gray-300 text-sm">{notes.contributors}</p>
                                     )}
                                 </div>
-                                <div className="p-4 space-y-4">
-                                    {devNote && (
-                                        <div className="bg-blue-900/10 border border-blue-700/20 rounded-md p-3">
-                                            <h4 className="text-sm font-bold text-blue-300 mb-2 flex items-center">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                                                </svg>
-                                                DEVELOPER NOTE
-                                                {isGenerating && <span className="ml-2 animate-pulse">•</span>}
-                                            </h4>
-                                            <p className="text-gray-300 text-sm">{devNote}</p>
-                                        </div>
-                                    )}
+                            )}
 
-                                    {marketingNote && (
-                                        <div className="bg-green-900/10 border border-green-700/20 rounded-md p-3">
-                                            <h4 className="text-sm font-bold text-green-300 mb-2 flex items-center">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
-                                                </svg>
-                                                MARKETING NOTE
-                                                {isGenerating && <span className="ml-2 animate-pulse">•</span>}
-                                            </h4>
-                                            <p className="text-gray-300 text-sm">{marketingNote}</p>
-                                        </div>
-                                    )}
-
-                                    {/* Contributors section */}
-                                    {(contributors || (contributorData && contributorData.length > 0)) && (
-                                        <div className="bg-purple-900/10 border border-purple-700/20 rounded-md p-3">
-                                            <h4 className="text-sm font-bold text-purple-300 mb-2 flex items-center">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                                                </svg>
-                                                CONTRIBUTORS
-                                                {isGenerating && <span className="ml-2 animate-pulse">•</span>}
-                                                {isLoadingContributors && <span className="ml-2 animate-pulse">Loading...</span>}
-                                            </h4>
-
-                                            {/* Show contributor badges with avatars if available */}
-                                            {contributorData && contributorData.length > 0 ? (
-                                                <div className="text-gray-300 text-sm">
-                                                    {contributorData.map((contributor, index) => (
-                                                        <span
-                                                            key={index}
-                                                            className="inline-flex items-center bg-purple-900/30 rounded-full px-2.5 py-0.5 text-xs font-medium text-purple-100 mr-2 mb-2"
-                                                        >
-                                                            <img
-                                                                src={contributor.avatar_url}
-                                                                alt={contributor.name}
-                                                                className="h-4 w-4 rounded-full mr-1"
-                                                            />
-                                                            {contributor.name} ({contributor.role})
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-gray-300 text-sm">{contributors}</p>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Changes section */}
-                                    {changes && (
-                                        <div className="bg-yellow-900/10 border border-yellow-700/20 rounded-md p-3">
-                                            <h4 className="text-sm font-bold text-yellow-300 mb-2 flex items-center">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                </svg>
-                                                CHANGES
-                                                {isGenerating && <span className="ml-2 animate-pulse">•</span>}
-                                            </h4>
-                                            <p className="text-gray-300 text-sm">{changes}</p>
-                                        </div>
-                                    )}
-
-                                    {/* PR URL Link - Inside the same container as release notes with enhanced styling */}
-                                    <div className="pt-3 border-t border-zinc-600/50">
-                                        <a
-                                            href={url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center text-sm text-blue-400 hover:text-blue-300 hover:underline group transition-all"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                            </svg>
-                                            View Pull Request on GitHub
-                                        </a>
-                                    </div>
+                            {notes.changes && (
+                                <div className="bg-yellow-900/10 border border-yellow-700/20 rounded-md p-3">
+                                    <h4 className="text-sm font-bold text-yellow-300 mb-2 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                        </svg>
+                                        CHANGES
+                                        {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                    </h4>
+                                    <p className="text-gray-300 text-sm">{notes.changes}</p>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
