@@ -236,8 +236,39 @@ export default function Home() {
 
         {/* Results Section */}
         <div className="border border-zinc-700/50 rounded-xl p-6 min-h-[300px] bg-zinc-800/50 backdrop-blur-sm shadow-xl">
-          <h2 className="text-2xl font-semibold mb-6 text-white border-b border-zinc-700/50 pb-3">
-            Merged Pull Requests
+          <h2 className="text-2xl font-semibold mb-6 text-white border-b border-zinc-700/50 pb-3 flex items-center justify-between">
+            <span>Merged Pull Requests</span>
+            <div className="group relative">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 hover:text-white cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-4m0-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="absolute top-1/2 right-full transform -translate-y-1/2 mr-2 w-80 p-4 bg-zinc-800 rounded-lg shadow-xl border border-zinc-700 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 z-50">
+                <h3 className="font-semibold text-white mb-2">About Diff Digest</h3>
+                <p className="text-sm text-gray-300 mb-2">
+                  Diff Digest helps you generate dual-tone release notes from any GitHub repository's pull requests. Here's how it works:
+                </p>
+                <ul className="text-sm text-gray-300 list-disc list-inside space-y-1">
+                  <li>Enter any GitHub repository owner (e.g., "openai") and name (e.g., "openai-node")</li>
+                  <li>Use the controls above to:
+                    <ul className="ml-4 mt-1 space-y-1">
+                      <li>• Set page number and items per page</li>
+                      <li>• Fetch PRs and clear all data</li>
+                    </ul>
+                  </li>
+                  <li>For each PR, you can:
+                    <ul className="ml-4 mt-1 space-y-1">
+                      <li>• View the PR description and changes</li>
+                      <li>• Generate AI-powered release notes</li>
+                      <li>• See contributor information</li>
+                      <li>• Track changes and documentation</li>
+                    </ul>
+                  </li>
+                </ul>
+                <p className="text-sm text-gray-300 mt-2">
+                  The AI will analyze each PR and generate both technical and marketing-friendly notes automatically!
+                </p>
+              </div>
+            </div>
           </h2>
 
           {error && (
@@ -318,6 +349,6 @@ export default function Home() {
           )}
         </div>
       </div>
-    </main>
+    </main >
   );
 }
