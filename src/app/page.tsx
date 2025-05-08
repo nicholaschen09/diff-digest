@@ -1,6 +1,6 @@
 "use client"; // Mark as a Client Component
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import DiffCard from "@/components/DiffCard";
 import { usePersistedState } from "@/lib/usePersistedState";
 
@@ -35,27 +35,46 @@ export default function Home() {
   const [nextPage, setNextPage] = usePersistedState<number | null>("persisted-nextPage", null);
   const [initialFetchDone, setInitialFetchDone] = usePersistedState<boolean>("persisted-initialFetchDone", false);
   const [isBatchGenerating, setIsBatchGenerating] = usePersistedState<boolean>("persisted-isBatchGenerating", false);
-  const [isRefreshing, setIsRefreshing] = usePersistedState<boolean>("persisted-isRefreshing", false);
+  const [owner, setOwner] = usePersistedState<string>("persisted-owner", "nicholaschen09");
+  const [repo, setRepo] = usePersistedState<string>("persisted-repo", "nicholas-personal-website");
 
   const diffCardRefs = useRef<Record<string, DiffCardRefMethods>>({});
 
-  const fetchDiffs = async (page: number) => {
+  // Clear persisted state when the app starts
+  useEffect(() => {
+    setDiffs([]);
+    setIsLoading(false);
+    setError(null);
+    setCurrentPage(1);
+    setNextPage(null);
+    setInitialFetchDone(false);
+    setIsBatchGenerating(false);
+  }, []); // Empty dependency array means this runs once when the component mounts
+
+  const fetchWithTimeout = (url: string, options: RequestInit, timeout = 10000) => {
+    return Promise.race([
+      fetch(url, options),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timed out')), timeout)
+      )
+    ]);
+  };
+
+  const fetchDiffs = useCallback(async (page: number) => {
+    if (!owner || !repo) {
+      setError('Please provide both owner and repo');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/sample-diffs?page=${page}&per_page=10`);
+      const response = (await fetchWithTimeout(`/api/sample-diffs?owner=${owner}&repo=${repo}&page=${page}`, {}, 10000)) as Response;
+      const data = await response.json();
+
       if (!response.ok) {
-        let errorMsg = `HTTP error! status: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.error || errorData.details || errorMsg;
-        } catch {
-          // Ignore if response body is not JSON
-          console.warn("Failed to parse error response as JSON");
-        }
-        throw new Error(errorMsg);
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
-      const data: ApiResponse = await response.json();
 
       setDiffs((prevDiffs) =>
         page === 1 ? data.diffs : [...prevDiffs, ...data.diffs]
@@ -67,38 +86,25 @@ export default function Home() {
       setError(
         err instanceof Error ? err.message : "An unknown error occurred"
       );
+      // Clear diffs on error to prevent showing stale data
+      if (page === 1) {
+        setDiffs([]);
+      }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [owner, repo, setDiffs, setCurrentPage, setNextPage, setError, setIsLoading, initialFetchDone, setInitialFetchDone]);
 
   // Use useEffect for auto-fetching to avoid hydration errors
   useEffect(() => {
-    // Auto-fetch PRs on first load if we have a page number but no diffs
-    // This helps restore state after refresh
-    if (initialFetchDone && diffs.length === 0 && !isLoading && currentPage > 0) {
+    if (initialFetchDone && diffs.length === 0 && !isLoading && currentPage > 0 && owner && repo) {
       fetchDiffs(currentPage);
     }
-  }, [initialFetchDone, diffs.length, isLoading, currentPage]);
+  }, [initialFetchDone, diffs.length, isLoading, currentPage, owner, repo, fetchDiffs]);
 
   const handleFetchClick = () => {
     setDiffs([]); // Clear existing diffs when fetching the first page again
     fetchDiffs(1);
-  };
-
-  const handleRefreshClick = () => {
-    setIsRefreshing(true);
-    // Reload the current page data
-    fetchDiffs(currentPage)
-      .finally(() => {
-        setIsRefreshing(false);
-      });
-  };
-
-  const handleLoadMoreClick = () => {
-    if (nextPage) {
-      fetchDiffs(nextPage);
-    }
   };
 
   const handleBatchGenerateClick = async () => {
@@ -140,43 +146,47 @@ export default function Home() {
         {/* Controls Section */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0 justify-center">
-            <button
-              className="px-5 py-3 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-all shadow-md disabled:opacity-50 font-medium"
-              onClick={handleFetchClick}
-              disabled={isLoading}
-            >
-              {isLoading && currentPage === 1 ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Fetching...
-                </span>
-              ) : (
-                "Fetch Merged Pull Requests"
-              )}
-            </button>
-
-            {diffs.length > 0 && (
+            <div className="flex flex-col">
+              <label htmlFor="owner" className="text-sm text-gray-400 mb-1">Repository Owner</label>
+              <input
+                id="owner"
+                type="text"
+                value={owner}
+                onChange={(e) => setOwner(e.target.value)}
+                placeholder="e.g., openai"
+                className="px-4 py-2 border border-zinc-700 rounded-md bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="repo" className="text-sm text-gray-400 mb-1">Repository Name</label>
+              <input
+                id="repo"
+                type="text"
+                value={repo}
+                onChange={(e) => setRepo(e.target.value)}
+                placeholder="e.g., openai-node"
+                className="px-4 py-2 border border-zinc-700 rounded-md bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-end">
               <button
-                className="px-5 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-500 transition-all shadow-md disabled:opacity-50 font-medium"
-                onClick={handleBatchGenerateClick}
-                disabled={isBatchGenerating || isLoading}
+                className="px-5 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-all shadow-md disabled:opacity-50 font-medium"
+                onClick={handleFetchClick}
+                disabled={isLoading}
               >
-                {isBatchGenerating ? (
+                {isLoading && currentPage === 1 ? (
                   <span className="flex items-center justify-center">
                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Generating for all...
+                    Fetching...
                   </span>
                 ) : (
-                  "Generate Notes for All"
+                  "Fetch Merged Pull Requests"
                 )}
               </button>
-            )}
+            </div>
           </div>
         </div>
 
@@ -203,8 +213,7 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
               <p className="text-gray-400 max-w-md">
-                Click the button above to fetch the latest merged pull requests
-                from the repository.
+                Enter a repository owner and name above to fetch the latest merged pull requests.
               </p>
             </div>
           )}
@@ -229,6 +238,8 @@ export default function Home() {
                   description={item.description}
                   diff={item.diff}
                   url={item.url}
+                  owner={owner}
+                  repo={repo}
                   ref={(methods) => registerDiffCard(item.id, methods)}
                 />
               ))}
@@ -245,7 +256,7 @@ export default function Home() {
             <div className="mt-8 flex justify-center">
               <button
                 className="px-4 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-colors disabled:opacity-50 flex items-center"
-                onClick={handleLoadMoreClick}
+                onClick={() => fetchDiffs(nextPage)}
                 disabled={isLoading}
               >
                 Load More

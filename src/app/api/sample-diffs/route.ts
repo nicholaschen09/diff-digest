@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
 import { Octokit } from '@octokit/rest';
 
-// Initialize Octokit. Use GITHUB_TOKEN environment variable for authentication if available.
-// Unauthenticated requests are subject to stricter rate limits.
+// Initialize Octokit with proper error handling
 const octokit = new Octokit({
-    auth: process.env.GITHUB_TOKEN,
+    auth: process.env.GITHUB_TOKEN || undefined,
+    log: {
+        debug: () => { },
+        info: () => { },
+        warn: console.warn,
+        error: console.error
+    }
 });
 
 // Default repository details (can be overridden by environment variables)
@@ -12,31 +17,63 @@ const DEFAULT_OWNER = 'openai';
 const DEFAULT_REPO = 'openai-node';
 
 export async function GET(request: Request) {
+    // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const owner = process.env.GITHUB_OWNER || DEFAULT_OWNER;
-    const repo = process.env.GITHUB_REPO || DEFAULT_REPO;
-    const perPageQuery = searchParams.get('per_page');
     const pageQuery = searchParams.get('page');
+    const owner = searchParams.get('owner');
+    const repo = searchParams.get('repo');
 
-    const per_page = perPageQuery ? parseInt(perPageQuery, 10) : 10;
+    // Validate required parameters
+    if (!owner || !repo) {
+        return NextResponse.json({
+            error: 'Both owner and repo parameters are required',
+            diffs: [],
+            nextPage: null,
+            currentPage: 1,
+            perPage: 100
+        }, { status: 400 });
+    }
+
     const page = pageQuery ? parseInt(pageQuery, 10) : 1;
 
-    if (isNaN(per_page) || per_page <= 0) {
-        return NextResponse.json({ error: 'Invalid per_page parameter' }, { status: 400 });
-    }
     if (isNaN(page) || page <= 0) {
-        return NextResponse.json({ error: 'Invalid page parameter' }, { status: 400 });
+        return NextResponse.json({
+            error: 'Invalid page parameter',
+            diffs: [],
+            nextPage: null,
+            currentPage: page,
+            perPage: 100
+        }, { status: 400 });
     }
 
     try {
+        // First verify the repository exists
+        try {
+            await octokit.repos.get({
+                owner,
+                repo
+            });
+        } catch (repoError: any) {
+            if (repoError.status === 404) {
+                return NextResponse.json({
+                    error: `Repository not found: ${owner}/${repo}`,
+                    diffs: [],
+                    nextPage: null,
+                    currentPage: page,
+                    perPage: 100
+                }, { status: 404 });
+            }
+            throw repoError;
+        }
+
         // Fetch closed pull requests (includes merged)
         const { data: closedPrs, headers } = await octokit.pulls.list({
             owner,
             repo,
             state: 'closed',
-            per_page,
+            per_page: 100,
             page,
-            sort: 'updated', // Get most recently updated ones first
+            sort: 'updated',
             direction: 'desc',
         });
 
@@ -51,70 +88,74 @@ export async function GET(request: Request) {
                     repo,
                     pull_number: pr.number,
                     mediaType: {
-                        format: 'diff', // Request the diff format
+                        format: 'diff',
                     },
                 });
 
-                // The diff content is directly in the data for this media type
-                const diffText = diffResponse.data as unknown as string; // Octokit types might be slightly off for mediaType requests
+                const diffText = diffResponse.data as unknown as string;
 
                 return {
-                    id: pr.number.toString(), // Use PR number as ID
+                    id: pr.number.toString(),
                     description: pr.title,
                     diff: diffText,
-                    url: pr.html_url, // Add the PR URL for context
+                    url: pr.html_url,
                 };
             } catch (diffError) {
-                let message = 'Unknown error fetching diff';
-                if (diffError instanceof Error) {
-                    message = diffError.message;
-                }
-                console.error(`Failed to fetch diff for PR #${pr.number}:`, message);
-                // Return null or a specific error object if a single diff fails
+                console.error(`Failed to fetch diff for PR #${pr.number}:`, diffError);
                 return null;
             }
         });
 
-        const diffResults = (await Promise.all(diffsPromises)).filter(d => d !== null); // Filter out any nulls from failed diff fetches
+        const diffResults = (await Promise.all(diffsPromises)).filter(d => d !== null);
 
-        // Basic pagination info based on Link header (if available)
+        // Basic pagination info based on Link header
         const linkHeader = headers.link;
         let nextPage: number | null = null;
         if (linkHeader) {
             const links = linkHeader.split(',').map(a => a.split(';'));
             const nextLink = links.find(link => link[1].includes('rel="next"'));
             if (nextLink) {
-                const url = new URL(nextLink[0].trim().slice(1, -1)); // Extract URL from <...>
+                const url = new URL(nextLink[0].trim().slice(1, -1));
                 nextPage = parseInt(url.searchParams.get('page') || '0', 10);
             }
         }
-
 
         return NextResponse.json({
             diffs: diffResults,
             nextPage: nextPage,
             currentPage: page,
-            perPage: per_page
+            perPage: 100
         });
+    } catch (error: any) {
+        console.error('Error fetching data from GitHub:', error);
 
-    } catch (error) {
-        let errorMessage = 'Unknown error fetching pull requests';
-        let errorStatus = 500;
-        if (error instanceof Error) {
-            errorMessage = error.message;
-        }
-        if (typeof error === 'object' && error !== null && 'status' in error) {
-            errorStatus = (error.status as number); // Keep 'any' for status as it comes from Octokit error
+        // Handle specific GitHub API errors
+        if (error.status === 403) {
+            return NextResponse.json({
+                error: 'GitHub API rate limit exceeded. Please try again later or use a GitHub token.',
+                diffs: [],
+                nextPage: null,
+                currentPage: page,
+                perPage: 100
+            }, { status: 403 });
         }
 
-        console.error('GitHub API Error:', errorMessage);
-        // Distinguish rate limit errors if possible
-        if (errorStatus === 403 && errorMessage.includes('rate limit exceeded')) {
-            return NextResponse.json({ error: 'GitHub API rate limit exceeded. Please try again later or provide a GITHUB_TOKEN environment variable.' }, { status: 429 });
+        if (error.status === 401) {
+            return NextResponse.json({
+                error: 'GitHub API authentication failed. Please check your GitHub token.',
+                diffs: [],
+                nextPage: null,
+                currentPage: page,
+                perPage: 100
+            }, { status: 401 });
         }
-        if (errorStatus === 404) {
-            return NextResponse.json({ error: `Repository not found: ${owner}/${repo}` }, { status: 404 });
-        }
-        return NextResponse.json({ error: 'Failed to fetch pull requests from GitHub.', details: errorMessage }, { status: errorStatus });
+
+        return NextResponse.json({
+            error: error.message || 'Failed to fetch data from GitHub',
+            diffs: [],
+            nextPage: null,
+            currentPage: page,
+            perPage: 100
+        }, { status: error.status || 500 });
     }
 }

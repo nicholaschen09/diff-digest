@@ -7,6 +7,8 @@ interface DiffCardProps {
     description: string;
     diff: string;
     url: string;
+    owner: string;
+    repo: string;
 }
 
 interface NoteState {
@@ -26,7 +28,7 @@ interface NoteState {
 const buttonBaseStyle = "px-3 py-2 text-xs rounded-md transition-all flex items-center w-[140px] justify-center shadow-sm";
 
 const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: () => void }, DiffCardProps>(
-    ({ id, description, diff, url }, ref) => {
+    ({ id, description, diff, url, owner, repo }, ref) => {
         const [isExpanded, setIsExpanded] = useState(false);
         const [isGenerating, setIsGenerating] = useState(false);
         const [error, setError] = useState<string | null>(null);
@@ -42,39 +44,61 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
             contributorData: []
         });
 
+        // Clear persisted state when the component mounts
+        useEffect(() => {
+            setNotes({
+                devNote: '',
+                marketingNote: '',
+                isVisible: true,
+                contributors: '',
+                changes: '',
+                contributorData: []
+            });
+        }, []); // Empty dependency array means this runs once when the component mounts
+
         const { devNote, marketingNote, isVisible, contributors, changes, contributorData } = notes;
 
         // Fetch contributor data when the PR ID is available
-        useEffect(() => {
-            const fetchContributorData = async () => {
-                // Add a check for empty arrays to prevent refetching
-                if (!id || (contributorData && contributorData.length > 0)) return;
+        const fetchContributorData = async () => {
+            // Add checks to prevent unnecessary fetches
+            if (!id ||
+                !owner ||
+                !repo ||
+                (contributorData && contributorData.length > 0) ||
+                isLoadingContributors) {
+                return;
+            }
 
-                try {
-                    setIsLoadingContributors(true);
-                    const response = await fetch(`/api/get-contributors?pr=${id}`);
+            try {
+                setIsLoadingContributors(true);
+                const response = await fetch(`/api/get-contributors?pr=${id}&owner=${owner}&repo=${repo}`);
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const data = await response.json();
-
-                    if (data.success && data.contributors.length > 0) {
-                        setNotes(prev => ({
-                            ...prev,
-                            contributorData: data.contributors
-                        }));
-                    }
-                } catch (err) {
-                    console.error("Error fetching contributors:", err);
-                } finally {
-                    setIsLoadingContributors(false);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
                 }
-            };
 
-            fetchContributorData();
-        }, [id]);
+                const data = await response.json();
+
+                if (data.success && data.contributors.length > 0) {
+                    setNotes(prev => ({
+                        ...prev,
+                        contributorData: data.contributors
+                    }));
+                }
+            } catch (err) {
+                console.error("Error fetching contributors:", err);
+            } finally {
+                setIsLoadingContributors(false);
+            }
+        };
+
+        // Update the useEffect to only run when necessary
+        useEffect(() => {
+            if (id && owner && repo && !isLoadingContributors) {
+                fetchContributorData();
+            }
+        }, [id, owner, repo, isLoadingContributors, contributorData, setNotes]);
 
         // Handle streaming from the API
         const handleGenerateNotes = async () => {
