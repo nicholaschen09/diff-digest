@@ -35,8 +35,8 @@ export default function Home() {
   const [nextPage, setNextPage] = usePersistedState<number | null>("persisted-nextPage", null);
   const [initialFetchDone, setInitialFetchDone] = usePersistedState<boolean>("persisted-initialFetchDone", false);
   const [isBatchGenerating, setIsBatchGenerating] = usePersistedState<boolean>("persisted-isBatchGenerating", false);
-  const [owner, setOwner] = usePersistedState<string>("persisted-owner", "nicholaschen09");
-  const [repo, setRepo] = usePersistedState<string>("persisted-repo", "nicholas-personal-website");
+  const [owner, setOwner] = usePersistedState<string>("persisted-owner", "");
+  const [repo, setRepo] = usePersistedState<string>("persisted-repo", "");
 
   const diffCardRefs = useRef<Record<string, DiffCardRefMethods>>({});
 
