@@ -13,6 +13,8 @@ interface NoteState {
     devNote: string;
     marketingNote: string;
     isVisible: boolean;
+    contributors: string;
+    changes: string;
 }
 
 const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: () => void }, DiffCardProps>(
@@ -25,17 +27,19 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
         const [notes, setNotes] = usePersistedState<NoteState>(`diff-notes-${id}`, {
             devNote: '',
             marketingNote: '',
-            isVisible: true
+            isVisible: true,
+            contributors: '',
+            changes: ''
         });
 
-        const { devNote, marketingNote, isVisible } = notes;
+        const { devNote, marketingNote, isVisible, contributors, changes } = notes;
 
         // Handle streaming from the API
         const handleGenerateNotes = async () => {
             // Skip if already generating
             if (isGenerating) return;
 
-            setNotes({ devNote: '', marketingNote: '', isVisible: true });
+            setNotes({ devNote: '', marketingNote: '', isVisible: true, contributors: '', changes: '' });
             setError(null);
             setIsGenerating(true);
 
@@ -88,13 +92,49 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                             const updatedDevNote = receivedText.substring(devStart, devEnd).trim();
 
                             const marketingStart = devEnd + 'MARKETING:'.length;
-                            const updatedMarketingNote = receivedText.substring(marketingStart).trim();
+                            let marketingEnd = receivedText.indexOf('CONTRIBUTORS:');
 
-                            setNotes({
-                                devNote: updatedDevNote,
-                                marketingNote: updatedMarketingNote,
-                                isVisible: true
-                            });
+                            if (marketingEnd === -1) {
+                                // No contributors section yet
+                                const updatedMarketingNote = receivedText.substring(marketingStart).trim();
+                                setNotes(prev => ({
+                                    ...prev,
+                                    devNote: updatedDevNote,
+                                    marketingNote: updatedMarketingNote,
+                                    isVisible: true
+                                }));
+                            } else {
+                                // Has contributors section
+                                const updatedMarketingNote = receivedText.substring(marketingStart, marketingEnd).trim();
+
+                                const contributorsStart = marketingEnd + 'CONTRIBUTORS:'.length;
+                                let contributorsEnd = receivedText.indexOf('CHANGES:');
+
+                                if (contributorsEnd === -1) {
+                                    // No changes section yet
+                                    const updatedContributors = receivedText.substring(contributorsStart).trim();
+                                    setNotes(prev => ({
+                                        ...prev,
+                                        devNote: updatedDevNote,
+                                        marketingNote: updatedMarketingNote,
+                                        contributors: updatedContributors,
+                                        isVisible: true
+                                    }));
+                                } else {
+                                    // Has changes section
+                                    const updatedContributors = receivedText.substring(contributorsStart, contributorsEnd).trim();
+                                    const changesStart = contributorsEnd + 'CHANGES:'.length;
+                                    const updatedChanges = receivedText.substring(changesStart).trim();
+
+                                    setNotes({
+                                        devNote: updatedDevNote,
+                                        marketingNote: updatedMarketingNote,
+                                        contributors: updatedContributors,
+                                        changes: updatedChanges,
+                                        isVisible: true
+                                    });
+                                }
+                            }
                         }
                     } else if (receivingDev) {
                         setNotes(prev => ({ ...prev, devNote: receivedText.trim(), isVisible: true }));
@@ -262,6 +302,34 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                                                 {isGenerating && <span className="ml-2 animate-pulse">•</span>}
                                             </h4>
                                             <p className="text-gray-300 text-sm">{marketingNote}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Contributors section */}
+                                    {contributors && (
+                                        <div className="bg-purple-900/10 border border-purple-700/20 rounded-md p-3">
+                                            <h4 className="text-sm font-bold text-purple-300 mb-2 flex items-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                                </svg>
+                                                CONTRIBUTORS
+                                                {isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                            </h4>
+                                            <p className="text-gray-300 text-sm">{contributors}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Changes section */}
+                                    {changes && (
+                                        <div className="bg-yellow-900/10 border border-yellow-700/20 rounded-md p-3">
+                                            <h4 className="text-sm font-bold text-yellow-300 mb-2 flex items-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                </svg>
+                                                CHANGES
+                                                {isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                            </h4>
+                                            <p className="text-gray-300 text-sm">{changes}</p>
                                         </div>
                                     )}
 

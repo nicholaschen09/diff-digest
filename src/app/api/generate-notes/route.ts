@@ -7,6 +7,18 @@ const openai = new OpenAI({
 
 export const runtime = 'edge';
 
+// Function to extract GitHub issue references from PR description
+const extractIssueReferences = (description: string) => {
+    // Match patterns like #123, fixes #123, closes #123, etc.
+    const issueRegex = /#(\d+)/g;
+    const matches = description.match(issueRegex);
+
+    if (!matches) return [];
+
+    // Extract just the numbers and remove duplicates
+    return [...new Set(matches.map(match => match.replace('#', '')))];
+};
+
 export async function POST(req: NextRequest) {
     // Get the diff data from the request
     let { diff, description, id } = await req.json();
@@ -24,19 +36,29 @@ export async function POST(req: NextRequest) {
             diff = diff.substring(0, 50000) + '... [truncated]';
         }
 
+        // Extract related issues from description for context
+        const relatedIssues = extractIssueReferences(description);
+        const issuesContext = relatedIssues.length > 0
+            ? `Related issues: ${relatedIssues.map(issue => `#${issue}`).join(', ')}`
+            : 'No related issues found in PR description.';
+
         // Create a streaming response
         const stream = await openai.chat.completions.create({
             model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
             messages: [
                 {
                     role: 'system',
-                    content: `You are a dual-tone release note generator. For the given Git diff, generate TWO types of notes:
+                    content: `You are a dual-tone release note generator with ability to analyze diffs. For the given Git diff, generate TWO types of notes:
             1. DEVELOPER NOTE: Technical, concise, focused on what was changed and why. Include technical details relevant to developers.
             2. MARKETING NOTE: User-centric, highlights benefits, uses simpler language to explain the impact.
             
             Format your response as follows:
             DEVELOPER: [your developer note here]
             MARKETING: [your marketing note here]
+            
+            Additionally, you should provide:
+            CONTRIBUTORS: [list of potential contributors based on the diff]
+            CHANGES: [analysis of the scope and type of changes - feature, bugfix, refactor, etc.]
             
             Important guidelines:
             - Make each note a single sentence, less than 150 characters if possible
@@ -47,7 +69,7 @@ export async function POST(req: NextRequest) {
                 },
                 {
                     role: 'user',
-                    content: `Generate release notes for this PR #${id}: "${description}"\n\nDiff:\n${diff}`
+                    content: `Generate release notes for this PR #${id}: "${description}"\n\nContext: ${issuesContext}\n\nDiff:\n${diff}`
                 }
             ],
             stream: true,
