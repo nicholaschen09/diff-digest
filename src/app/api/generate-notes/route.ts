@@ -138,62 +138,91 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // Create a streaming response
-        const stream = await openai.chat.completions.create({
-            model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-            messages: [
-                {
-                    role: 'system',
-                    content: `You are a dual-tone release note generator with ability to analyze diffs. For the given Git diff, generate TWO types of notes:
-            1. DEVELOPER NOTE: Technical, concise, focused on what was changed and why. Include technical details relevant to developers.
-            2. MARKETING NOTE: User-centric, highlights benefits, uses simpler language to explain the impact.
-            
-            Format your response as follows:
-            DEVELOPER: [your developer note here]
-            MARKETING: [your marketing note here]
-            
-            Additionally, you should provide:
-            CONTRIBUTORS: [list specific contributor names/usernames who worked on this PR; identify their roles if possible]
-            CHANGES: [detailed analysis of the scope and type of changes - feature, bugfix, refactor, etc.]
-            
-            Important guidelines:
-            - Make each note a single sentence, less than 150 characters if possible
-            - Be specific about what changed based on the diff content
-            - Don't hallucinate features not evident in the diff
-            - For contributors, be specific with names - don't make up contributors if none are evident
-            - If you cannot determine what changed, say so honestly
-            - Do not include markdown formatting`
-                },
-                {
-                    role: 'user',
-                    content: `Generate release notes for this PR #${id}: "${description}"\n\nContext: ${issuesContext}\n\nContributors Context: ${contributorsContext}\n\nDiff:\n${diff}`
-                }
-            ],
-            stream: true,
-        });
+        // Create a streaming response with a timeout
+        const abortController = new AbortController();
+        const timeoutId = setTimeout(() => abortController.abort(), 30000); // 30-second timeout
 
-        // Create a readable stream for the client
-        const readableStream = new ReadableStream({
-            async start(controller) {
-                for await (const chunk of stream) {
-                    const content = chunk.choices[0]?.delta?.content || '';
-                    if (content) {
-                        // Send the content as it arrives
-                        controller.enqueue(new TextEncoder().encode(content));
+        try {
+            const stream = await openai.chat.completions.create({
+                model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `You are a dual-tone release note generator with ability to analyze diffs. For the given Git diff, generate TWO types of notes:
+                1. DEVELOPER NOTE: Technical, concise, focused on what was changed and why. Include technical details relevant to developers.
+                2. MARKETING NOTE: User-centric, highlights benefits, uses simpler language to explain the impact.
+                
+                Format your response as follows:
+                DEVELOPER: [your developer note here]
+                MARKETING: [your marketing note here]
+                
+                Additionally, you should provide:
+                CONTRIBUTORS: [list specific contributor names/usernames who worked on this PR; identify their roles if possible]
+                CHANGES: [detailed analysis of the scope and type of changes - feature, bugfix, refactor, etc.]
+                
+                Important guidelines:
+                - Make each note a single sentence, less than 150 characters if possible
+                - Be specific about what changed based on the diff content
+                - Don't hallucinate features not evident in the diff
+                - For contributors, be specific with names - don't make up contributors if none are evident
+                - If you cannot determine what changed, say so honestly
+                - Do not include markdown formatting`
+                    },
+                    {
+                        role: 'user',
+                        content: `Generate release notes for this PR #${id}: "${description}"\n\nContext: ${issuesContext}\n\nContributors Context: ${contributorsContext}\n\nDiff:\n${diff}`
                     }
-                }
-                controller.close();
-            },
-        });
+                ],
+                stream: true,
+                max_tokens: 1000, // Limit response size
+            }, {
+                signal: abortController.signal
+            });
 
-        // Return the stream as SSE
-        return new Response(readableStream, {
-            headers: {
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-            },
-        });
+            // Create a readable stream for the client
+            const readableStream = new ReadableStream({
+                async start(controller) {
+                    try {
+                        for await (const chunk of stream) {
+                            const content = chunk.choices[0]?.delta?.content || '';
+                            if (content) {
+                                // Send the content as it arrives
+                                controller.enqueue(new TextEncoder().encode(content));
+                            }
+                        }
+                        controller.close();
+                    } catch (err: unknown) {
+                        if (err && typeof err === 'object' && 'name' in err && err.name === 'AbortError') {
+                            controller.enqueue(new TextEncoder().encode(
+                                "\n\nDEVELOPER: Request timed out. Please try again later.\n" +
+                                "MARKETING: Request timed out. Please try again later.\n" +
+                                "CONTRIBUTORS: Unknown due to timeout.\n" +
+                                "CHANGES: Unknown due to timeout."
+                            ));
+                        } else {
+                            controller.enqueue(new TextEncoder().encode(
+                                "\n\nDEVELOPER: Error generating notes. Please try again.\n" +
+                                "MARKETING: Error generating notes. Please try again.\n" +
+                                "CONTRIBUTORS: Unknown due to error.\n" +
+                                "CHANGES: Unknown due to error."
+                            ));
+                        }
+                        controller.close();
+                    }
+                },
+            });
+
+            // Return the stream as SSE
+            return new Response(readableStream, {
+                headers: {
+                    'Content-Type': 'text/event-stream',
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                },
+            });
+        } finally {
+            clearTimeout(timeoutId);
+        }
     } catch (error) {
         console.error('Error with OpenAI API:', error);
         return NextResponse.json(

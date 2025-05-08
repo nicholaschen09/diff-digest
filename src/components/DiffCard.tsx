@@ -45,6 +45,7 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
         // Fetch contributor data when the PR ID is available
         useEffect(() => {
             const fetchContributorData = async () => {
+                // Add a check for empty arrays to prevent refetching
                 if (!id || (contributorData && contributorData.length > 0)) return;
 
                 try {
@@ -71,7 +72,7 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
             };
 
             fetchContributorData();
-        }, [id, contributorData]);
+        }, [id]);
 
         // Handle streaming from the API
         const handleGenerateNotes = async () => {
@@ -113,86 +114,101 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                 }
 
                 let receivedText = '';
-                let receivingDev = true; // Start with developer note
+                let abortController = new AbortController();
 
-                // Read the stream
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+                // Set a timeout to prevent infinite streaming
+                const timeoutId = setTimeout(() => {
+                    abortController.abort();
+                    setError('Request timed out after 30 seconds. Please try again.');
+                    setIsGenerating(false);
+                }, 30000);
 
-                    // Decode and append the chunk
-                    const chunk = new TextDecoder().decode(value);
-                    receivedText += chunk;
-
-                    // Parse text for developer and marketing notes
-                    if (receivedText.includes('DEVELOPER:')) {
-                        const devStart = receivedText.indexOf('DEVELOPER:') + 'DEVELOPER:'.length;
-                        let devEnd = receivedText.indexOf('MARKETING:');
-
-                        if (devEnd === -1) {
-                            // Still receiving the developer note
-                            setNotes(prev => ({ ...prev, devNote: receivedText.substring(devStart).trim(), isVisible: true }));
-                        } else {
-                            // Found both tags, can separate the notes
-                            receivingDev = false;
-                            const updatedDevNote = receivedText.substring(devStart, devEnd).trim();
-
-                            const marketingStart = devEnd + 'MARKETING:'.length;
-                            let marketingEnd = receivedText.indexOf('CONTRIBUTORS:');
-
-                            if (marketingEnd === -1) {
-                                // No contributors section yet
-                                const updatedMarketingNote = receivedText.substring(marketingStart).trim();
-                                setNotes(prev => ({
-                                    ...prev,
-                                    devNote: updatedDevNote,
-                                    marketingNote: updatedMarketingNote,
-                                    isVisible: true
-                                }));
-                            } else {
-                                // Has contributors section
-                                const updatedMarketingNote = receivedText.substring(marketingStart, marketingEnd).trim();
-
-                                const contributorsStart = marketingEnd + 'CONTRIBUTORS:'.length;
-                                let contributorsEnd = receivedText.indexOf('CHANGES:');
-
-                                if (contributorsEnd === -1) {
-                                    // No changes section yet
-                                    const updatedContributors = receivedText.substring(contributorsStart).trim();
-                                    setNotes(prev => ({
-                                        ...prev,
-                                        devNote: updatedDevNote,
-                                        marketingNote: updatedMarketingNote,
-                                        contributors: updatedContributors,
-                                        isVisible: true
-                                    }));
-                                } else {
-                                    // Has changes section
-                                    const updatedContributors = receivedText.substring(contributorsStart, contributorsEnd).trim();
-                                    const changesStart = contributorsEnd + 'CHANGES:'.length;
-                                    const updatedChanges = receivedText.substring(changesStart).trim();
-
-                                    setNotes(prev => ({
-                                        ...prev,
-                                        devNote: updatedDevNote,
-                                        marketingNote: updatedMarketingNote,
-                                        contributors: updatedContributors,
-                                        changes: updatedChanges,
-                                        isVisible: true
-                                    }));
-                                }
-                            }
+                try {
+                    // Read the stream
+                    while (true) {
+                        if (abortController.signal.aborted) {
+                            break;
                         }
-                    } else if (receivingDev) {
-                        setNotes(prev => ({ ...prev, devNote: receivedText.trim(), isVisible: true }));
-                    } else {
-                        setNotes(prev => ({ ...prev, marketingNote: receivedText.trim(), isVisible: true }));
+
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        // Decode and append the chunk
+                        const chunk = new TextDecoder().decode(value);
+                        receivedText += chunk;
+
+                        // Parse the received text in a more robust way
+                        parseAndUpdateNotes(receivedText);
                     }
+                } catch (streamError) {
+                    console.error('Error reading stream:', streamError);
+                    setError('Error reading response stream. Please try again.');
+                } finally {
+                    clearTimeout(timeoutId);
+                    reader.releaseLock();
                 }
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'An unknown error occurred');
             } finally {
                 setIsGenerating(false);
+            }
+        };
+
+        // Helper function to parse and update notes state
+        const parseAndUpdateNotes = (text: string) => {
+            try {
+                // Initialize with empty values
+                let devNote = '';
+                let marketingNote = '';
+                let contributors = '';
+                let changes = '';
+
+                // Use regex without 's' flag by replacing newlines with a placeholder
+                const processedText = text.replace(/\n/g, ' __NEWLINE__ ');
+
+                // Check for developer notes section
+                const devMatch = processedText.match(/DEVELOPER:\s*(.*?)(?=MARKETING:|$)/);
+                if (devMatch && devMatch[1]) {
+                    devNote = devMatch[1].replace(/__NEWLINE__/g, '\n').trim();
+                }
+
+                // Check for marketing notes section
+                const marketingMatch = processedText.match(/MARKETING:\s*(.*?)(?=CONTRIBUTORS:|$)/);
+                if (marketingMatch && marketingMatch[1]) {
+                    marketingNote = marketingMatch[1].replace(/__NEWLINE__/g, '\n').trim();
+                }
+
+                // Check for contributors section
+                const contributorsMatch = processedText.match(/CONTRIBUTORS:\s*(.*?)(?=CHANGES:|$)/);
+                if (contributorsMatch && contributorsMatch[1]) {
+                    contributors = contributorsMatch[1].replace(/__NEWLINE__/g, '\n').trim();
+                }
+
+                // Check for changes section
+                const changesMatch = processedText.match(/CHANGES:\s*(.*?)$/);
+                if (changesMatch && changesMatch[1]) {
+                    changes = changesMatch[1].replace(/__NEWLINE__/g, '\n').trim();
+                }
+
+                // Update state with parsed values
+                setNotes(prev => ({
+                    ...prev,
+                    devNote,
+                    marketingNote,
+                    contributors,
+                    changes,
+                    isVisible: true
+                }));
+            } catch (parseError) {
+                console.error('Error parsing notes:', parseError);
+                // Even on parse error, display the raw text to avoid losing content
+                if (text.includes('DEVELOPER:')) {
+                    setNotes(prev => ({
+                        ...prev,
+                        devNote: text,
+                        isVisible: true
+                    }));
+                }
             }
         };
 
