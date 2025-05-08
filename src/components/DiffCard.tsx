@@ -23,6 +23,8 @@ interface NoteState {
     }>;
 }
 
+const buttonBaseStyle = "px-3 py-2 text-xs rounded-md transition-all flex items-center w-[140px] justify-center shadow-sm";
+
 const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: () => void }, DiffCardProps>(
     ({ id, description, diff, url }, ref) => {
         const [isExpanded, setIsExpanded] = useState(false);
@@ -246,7 +248,10 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                     <div className="flex space-x-2">
                         <button
                             onClick={() => setIsExpanded(!isExpanded)}
-                            className="px-3 py-1.5 text-xs bg-zinc-700 text-gray-300 rounded-md hover:bg-zinc-600 hover:text-white transition-all"
+                            className={cn(
+                                buttonBaseStyle,
+                                "bg-zinc-700 text-gray-300 hover:bg-zinc-600 hover:text-white"
+                            )}
                         >
                             {isExpanded ? (
                                 <span className="flex items-center">
@@ -268,10 +273,10 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                             onClick={handleGenerateNotes}
                             disabled={isGenerating}
                             className={cn(
-                                "px-3 py-1.5 text-xs rounded-md transition-all flex items-center",
+                                buttonBaseStyle,
                                 isGenerating
                                     ? "bg-blue-700/70 text-white cursor-wait"
-                                    : "bg-blue-600 text-white hover:bg-blue-500 shadow-sm"
+                                    : "bg-blue-600 text-white hover:bg-blue-500"
                             )}
                         >
                             {isGenerating ? (
@@ -294,7 +299,10 @@ const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: ()
                         {(devNote || marketingNote) && isVisible && (
                             <button
                                 onClick={handleCloseNotes}
-                                className="px-3 py-1.5 text-xs bg-red-600 text-white rounded-md hover:bg-red-500 transition-all flex items-center"
+                                className={cn(
+                                    buttonBaseStyle,
+                                    "bg-red-600 text-white hover:bg-red-500"
+                                )}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
