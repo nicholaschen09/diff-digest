@@ -1,20 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Octokit } from '@octokit/rest';
 
 // Default repository settings
-const DEFAULT_OWNER = process.env.GITHUB_OWNER || 'openai';
-const DEFAULT_REPO = process.env.GITHUB_REPO || 'openai-node';
-
-// Initialize Octokit with proper error handling
-const octokit = new Octokit({
-    auth: process.env.GITHUB_TOKEN || undefined,
-    log: {
-        debug: () => { },
-        info: () => { },
-        warn: console.warn,
-        error: console.error
-    }
-});
+const DEFAULT_OWNER = process.env.GITHUB_OWNER ?? 'openai';
+const DEFAULT_REPO = process.env.GITHUB_REPO ?? 'openai-node';
 
 // Function to extract PR number from URL or ID
 const extractPRNumber = (idOrUrl: string): number | null => {
@@ -34,6 +22,17 @@ const extractPRNumber = (idOrUrl: string): number | null => {
 
 async function getContributorsFromGitHub(prNumber: string, owner: string, repo: string) {
     try {
+        const { Octokit } = await import('@octokit/rest');
+        const octokit = new Octokit({
+            auth: process.env.GITHUB_TOKEN || undefined,
+            log: {
+                debug: () => { },
+                info: () => { },
+                warn: console.warn,
+                error: console.error
+            }
+        });
+
         // First get the PR details to get the author
         const prResponse = await octokit.pulls.get({
             owner,
