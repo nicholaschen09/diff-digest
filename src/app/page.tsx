@@ -101,13 +101,6 @@ export default function Home() {
     }
   }, [owner, repo, perPage, setDiffs, setCurrentPage, setNextPage, setError, setIsLoading, initialFetchDone, setInitialFetchDone, reverseOrder]);
 
-  // Use useEffect for auto-fetching to avoid hydration errors
-  useEffect(() => {
-    if (initialFetchDone && diffs.length === 0 && !isLoading && currentPage > 0 && owner && repo) {
-      fetchDiffs(currentPage, reverseOrder ? 'asc' : 'desc');
-    }
-  }, [initialFetchDone, diffs.length, isLoading, currentPage, owner, repo, fetchDiffs, reverseOrder]);
-
   // Refetch PRs when reverseOrder changes
   useEffect(() => {
     if (initialFetchDone) {
