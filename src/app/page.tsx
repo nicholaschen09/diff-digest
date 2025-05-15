@@ -21,6 +21,7 @@ export default function Home() {
   const [perPage, setPerPage] = usePersistedState<number | undefined>("persisted-perPage", undefined);
   const [page, setPage] = usePersistedState<number | undefined>("persisted-page", undefined);
   const [repoUrl, setRepoUrl] = usePersistedState<string>("persisted-repoUrl", "");
+  const [reverseOrder, setReverseOrder] = usePersistedState<boolean>("persisted-reverseOrder", false);
 
   const diffCardRefs = useRef<Record<string, DiffCardRefMethods>>({});
 
@@ -60,7 +61,7 @@ export default function Home() {
     ]);
   };
 
-  const fetchDiffs = useCallback(async (pageNum: number) => {
+  const fetchDiffs = useCallback(async (pageNum: number, direction?: 'asc' | 'desc') => {
     if (!owner || !repo) {
       setError('Please provide both owner and repo');
       return;
@@ -69,16 +70,19 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = (await fetchWithTimeout(`/api/sample-diffs?owner=${owner}&repo=${repo}&page=${pageNum}&per_page=${perPage}`, {}, 10000)) as Response;
+      const dir = direction || (reverseOrder ? 'asc' : 'desc');
+      const response = (await fetchWithTimeout(`/api/sample-diffs?owner=${owner}&repo=${repo}&page=${pageNum}&per_page=${perPage}${dir ? `&direction=${dir}` : ''}`, {}, 10000)) as Response;
       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
 
-      setDiffs((prevDiffs) =>
-        pageNum === 1 ? data.diffs : [...prevDiffs, ...data.diffs]
-      );
+      setDiffs((prevDiffs) => {
+        if (pageNum === 1) return data.diffs;
+        // Append or prepend based on direction
+        return dir === 'asc' ? [...prevDiffs, ...data.diffs] : [...data.diffs, ...prevDiffs];
+      });
       setCurrentPage(data.currentPage);
       setNextPage(data.nextPage);
       if (!initialFetchDone) setInitialFetchDone(true);
@@ -93,18 +97,18 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  }, [owner, repo, perPage, setDiffs, setCurrentPage, setNextPage, setError, setIsLoading, initialFetchDone, setInitialFetchDone]);
+  }, [owner, repo, perPage, setDiffs, setCurrentPage, setNextPage, setError, setIsLoading, initialFetchDone, setInitialFetchDone, reverseOrder]);
 
   // Use useEffect for auto-fetching to avoid hydration errors
   useEffect(() => {
     if (initialFetchDone && diffs.length === 0 && !isLoading && currentPage > 0 && owner && repo) {
-      fetchDiffs(currentPage);
+      fetchDiffs(currentPage, reverseOrder ? 'asc' : 'desc');
     }
-  }, [initialFetchDone, diffs.length, isLoading, currentPage, owner, repo, fetchDiffs]);
+  }, [initialFetchDone, diffs.length, isLoading, currentPage, owner, repo, fetchDiffs, reverseOrder]);
 
   const handleFetchClick = () => {
     setDiffs([]); // Clear existing diffs when fetching the first page again
-    fetchDiffs(page === undefined ? 1 : page);
+    fetchDiffs(page === undefined ? 1 : page, reverseOrder ? 'asc' : 'desc');
   };
 
   const handleBatchGenerateClick = async () => {
@@ -227,7 +231,7 @@ export default function Home() {
                 onClick={handleFetchClick}
                 disabled={isLoading}
                 className={cn(
-                  "px-4 py-2 rounded-md transition-all flex items-center justify-center shadow-sm",
+                  "px-2 py-1 text-sm rounded-md transition-all flex items-center justify-center shadow-sm",
                   isLoading
                     ? "bg-blue-700/70 text-white cursor-wait"
                     : "bg-blue-600 text-white hover:bg-blue-500"
@@ -252,7 +256,7 @@ export default function Home() {
               </button>
               <button
                 onClick={clearAllState}
-                className="px-4 py-2 rounded-md transition-all flex items-center justify-center shadow-sm bg-red-600 text-white hover:bg-red-500"
+                className="px-2 py-1 text-sm rounded-md transition-all flex items-center justify-center shadow-sm bg-red-600 text-white hover:bg-red-500"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -267,35 +271,58 @@ export default function Home() {
         <div className="border border-zinc-700/50 rounded-xl p-6 min-h-[300px] bg-zinc-800/50 backdrop-blur-sm shadow-xl">
           <h2 className="text-2xl font-semibold mb-6 text-white border-b border-zinc-700/50 pb-3 flex items-center justify-between">
             <span>Merged Pull Requests</span>
-            <div className="group relative">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 hover:text-white cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-4m0-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div className="absolute top-1/2 right-full transform -translate-y-1/2 mr-2 w-80 p-4 bg-zinc-800 rounded-lg shadow-xl border border-zinc-700 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 z-50">
-                <h3 className="font-semibold text-white mb-2">About Diff Digest</h3>
-                <p className="text-sm text-gray-300 mb-2">
-                  Diff Digest helps you generate dual-tone release notes from any GitHub repository's pull requests. Here's how it works:
-                </p>
-                <ul className="text-sm text-gray-300 list-disc list-inside space-y-1">
-                  <li>Enter any GitHub repository owner (e.g., "openai") and name (e.g., "openai-node")</li>
-                  <li>Use the controls above to:
-                    <ul className="ml-4 mt-1 space-y-1">
-                      <li>• Set page number and items per page</li>
-                      <li>• Fetch PRs and clear all data</li>
-                    </ul>
-                  </li>
-                  <li>For each PR, you can:
-                    <ul className="ml-4 mt-1 space-y-1">
-                      <li>• View the PR description and changes</li>
-                      <li>• Generate AI-powered release notes</li>
-                      <li>• See contributor information</li>
-                      <li>• Track changes and documentation</li>
-                    </ul>
-                  </li>
-                </ul>
-                <p className="text-sm text-gray-300 mt-2">
-                  The AI will analyze each PR and generate both technical and marketing-friendly notes automatically!
-                </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setReverseOrder((prev) => !prev)}
+                className={cn(
+                  "px-2 py-0.5 text-sm rounded bg-zinc-700 text-white hover:bg-zinc-600 transition-colors flex items-center gap-2 justify-center",
+                  reverseOrder ? "ring-2 ring-blue-500" : ""
+                )}
+                aria-pressed={reverseOrder}
+                style={{ width: 130, height: 28 }}
+              >
+                {reverseOrder ? (
+                  <>
+                    <span>Oldest First</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
+                  </>
+                ) : (
+                  <>
+                    <span>Newest First</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                  </>
+                )}
+              </button>
+              <div className="group relative">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 hover:text-white cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-4m0-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="absolute top-1/2 right-full transform -translate-y-1/2 mr-2 w-80 p-4 bg-zinc-800 rounded-lg shadow-xl border border-zinc-700 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 z-50">
+                  <h3 className="font-semibold text-white mb-2">About Diff Digest</h3>
+                  <p className="text-sm text-gray-300 mb-2">
+                    Diff Digest helps you generate dual-tone release notes from any GitHub repository's pull requests. Here's how it works:
+                  </p>
+                  <ul className="text-sm text-gray-300 list-disc list-inside space-y-1">
+                    <li>Enter any GitHub repository owner (e.g., "openai") and name (e.g., "openai-node")</li>
+                    <li>Use the controls above to:
+                      <ul className="ml-4 mt-1 space-y-1">
+                        <li>• Set page number and items per page</li>
+                        <li>• Fetch PRs and clear all data</li>
+                      </ul>
+                    </li>
+                    <li>For each PR, you can:
+                      <ul className="ml-4 mt-1 space-y-1">
+                        <li>• View the PR description and changes</li>
+                        <li>• Generate AI-powered release notes</li>
+                        <li>• See contributor information</li>
+                        <li>• Track changes and documentation</li>
+                      </ul>
+                    </li>
+                  </ul>
+                  <p className="text-sm text-gray-300 mt-2">
+                    The AI will analyze each PR and generate both technical and marketing-friendly notes automatically!
+                  </p>
+                </div>
               </div>
             </div>
           </h2>
@@ -366,7 +393,7 @@ export default function Home() {
             <div className="mt-8 flex justify-center">
               <button
                 className="px-4 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-colors disabled:opacity-50 flex items-center"
-                onClick={() => fetchDiffs(nextPage)}
+                onClick={() => fetchDiffs(nextPage, reverseOrder ? 'asc' : 'desc')}
                 disabled={isLoading}
               >
                 Load More

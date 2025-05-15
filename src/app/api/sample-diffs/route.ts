@@ -56,6 +56,7 @@ export async function GET(request: Request) {
     const perPageQuery = searchParams.get('per_page');
     const owner = searchParams.get('owner');
     const repo = searchParams.get('repo');
+    const direction = searchParams.get('direction') === 'asc' ? 'asc' : 'desc';
 
     // Validate required parameters
     if (!owner || !repo) {
@@ -119,8 +120,8 @@ export async function GET(request: Request) {
             state: 'closed',
             per_page: perPage,
             page,
-            sort: 'updated',
-            direction: 'desc',
+            sort: 'created',
+            direction,
         });
 
         // Filter for merged PRs
