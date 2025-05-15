@@ -18,8 +18,8 @@ export default function Home() {
   const [isBatchGenerating, setIsBatchGenerating] = usePersistedState<boolean>("persisted-isBatchGenerating", false);
   const [owner, setOwner] = usePersistedState<string>("persisted-owner", "");
   const [repo, setRepo] = usePersistedState<string>("persisted-repo", "");
-  const [perPage, setPerPage] = usePersistedState<number>("persisted-perPage", 10);
-  const [page, setPage] = usePersistedState<number>("persisted-page", 1);
+  const [perPage, setPerPage] = usePersistedState<number | undefined>("persisted-perPage", undefined);
+  const [page, setPage] = usePersistedState<number | undefined>("persisted-page", undefined);
   const [repoUrl, setRepoUrl] = usePersistedState<string>("persisted-repoUrl", "");
 
   const diffCardRefs = useRef<Record<string, DiffCardRefMethods>>({});
@@ -34,8 +34,8 @@ export default function Home() {
     setIsBatchGenerating(false);
     setOwner("");
     setRepo("");
-    setPerPage(10);
-    setPage(1);
+    setPerPage(undefined);
+    setPage(undefined);
     setRepoUrl("");
     // Clear all localStorage items that start with "persisted-"
     Object.keys(localStorage).forEach(key => {
@@ -104,7 +104,7 @@ export default function Home() {
 
   const handleFetchClick = () => {
     setDiffs([]); // Clear existing diffs when fetching the first page again
-    fetchDiffs(page);
+    fetchDiffs(page === undefined ? 1 : page);
   };
 
   const handleBatchGenerateClick = async () => {
@@ -196,8 +196,11 @@ export default function Home() {
                   id="page"
                   type="number"
                   min="1"
-                  value={page}
-                  onChange={(e) => setPage(Math.max(1, parseInt(e.target.value) || 1))}
+                  value={page === undefined ? '' : page}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setPage(isNaN(val) ? undefined : Math.max(1, val));
+                  }}
                   placeholder="1"
                   className="px-4 py-2 border border-zinc-700 rounded-md bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
@@ -209,8 +212,11 @@ export default function Home() {
                   type="number"
                   min="1"
                   max="100"
-                  value={perPage}
-                  onChange={(e) => setPerPage(Math.min(100, Math.max(1, parseInt(e.target.value) || 10)))}
+                  value={perPage === undefined ? '' : perPage}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setPerPage(isNaN(val) ? undefined : Math.min(100, Math.max(1, val)));
+                  }}
                   placeholder="10"
                   className="px-4 py-2 border border-zinc-700 rounded-md bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
