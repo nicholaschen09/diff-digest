@@ -424,7 +424,7 @@ export default function Home() {
                 disabled={isLoading}
               >
                 Load More
-                <span className="ml-1 bg-zinc-600 rounded-full px-2 py-1 text-xs">
+                <span className="ml-4 bg-zinc-600 rounded-full px-2 py-1 text-xs">
                   Page {nextPage}
                 </span>
               </button>
