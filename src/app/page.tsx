@@ -108,6 +108,13 @@ export default function Home() {
     }
   }, [initialFetchDone, diffs.length, isLoading, currentPage, owner, repo, fetchDiffs, reverseOrder]);
 
+  // Refetch PRs when reverseOrder changes
+  useEffect(() => {
+    if (initialFetchDone) {
+      handleFetchClick();
+    }
+  }, [reverseOrder]);
+
   const handleFetchClick = () => {
     setDiffs([]); // Clear existing diffs when fetching the first page again
     fetchDiffs(page === undefined ? 1 : page, reverseOrder ? 'asc' : 'desc');
