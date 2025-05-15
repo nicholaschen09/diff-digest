@@ -272,15 +272,22 @@ export default function Home() {
           <h2 className="text-2xl font-semibold mb-6 text-white border-b border-zinc-700/50 pb-3 flex items-center justify-between">
             <span>Merged Pull Requests</span>
             <div className="flex items-center gap-2">
-              <select
-                value={reverseOrder ? "oldest" : "newest"}
-                onChange={e => setReverseOrder(e.target.value === "oldest")}
-                className="px-2 py-0.5 text-sm rounded bg-zinc-700 text-white hover:bg-zinc-600 transition-colors h-[28px] w-[130px] mr-2"
-                style={{ width: 130, height: 28 }}
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-              </select>
+              <div className="relative mr-2 self-center" style={{ width: 150, height: 36 }}>
+                <select
+                  value={reverseOrder ? "oldest" : "newest"}
+                  onChange={e => setReverseOrder(e.target.value === "oldest")}
+                  className="appearance-none w-full h-full px-3 py-1 text-base font-medium rounded-lg bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 transition"
+                  style={{ width: 150, height: 36 }}
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                </select>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </span>
+              </div>
               <div className="group relative">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 hover:text-white cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-4m0-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
