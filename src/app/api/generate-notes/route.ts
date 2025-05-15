@@ -5,6 +5,32 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY || '',
 });
 
+// Function to parse GitHub repository URL
+function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
+    try {
+        // Handle different GitHub URL formats
+        const patterns = [
+            /github\.com\/([^\/]+)\/([^\/]+)(?:\.git)?$/,  // https://github.com/owner/repo
+            /github\.com\/([^\/]+)\/([^\/]+)(?:\/|$)/,     // https://github.com/owner/repo/
+            /git@github\.com:([^\/]+)\/([^\/]+)(?:\.git)?$/ // git@github.com:owner/repo.git
+        ];
+
+        for (const pattern of patterns) {
+            const match = url.match(pattern);
+            if (match) {
+                return {
+                    owner: match[1],
+                    repo: match[2].replace('.git', '')
+                };
+            }
+        }
+        return null;
+    } catch (error) {
+        console.error('Error parsing GitHub URL:', error);
+        return null;
+    }
+}
+
 // Default repository settings
 const DEFAULT_OWNER = process.env.GITHUB_OWNER || 'openai';
 const DEFAULT_REPO = process.env.GITHUB_REPO || 'openai-node';
@@ -41,7 +67,7 @@ const extractPRNumber = (idOrUrl: string): number | null => {
 };
 
 // Function to get real contributors from GitHub API
-async function getContributorsFromGitHub(prNumber: number) {
+async function getContributorsFromGitHub(prNumber: number, owner: string, repo: string) {
     try {
         // Dynamically import octokit to avoid CommonJS/ESM issues
         const { Octokit } = await import('@octokit/rest');
@@ -52,15 +78,15 @@ async function getContributorsFromGitHub(prNumber: number) {
 
         // Get PR information including author
         const { data: pr } = await octokit.pulls.get({
-            owner: DEFAULT_OWNER,
-            repo: DEFAULT_REPO,
+            owner: owner,
+            repo: repo,
             pull_number: prNumber,
         });
 
         // Get all PR commits
         const { data: commits } = await octokit.pulls.listCommits({
-            owner: DEFAULT_OWNER,
-            repo: DEFAULT_REPO,
+            owner: owner,
+            repo: repo,
             pull_number: prNumber,
             per_page: 100,
         });
@@ -102,13 +128,25 @@ async function getContributorsFromGitHub(prNumber: number) {
 
 export async function POST(req: NextRequest) {
     try {
-        const { diff, description, id, url } = await req.json();
+        const { diff, description, id, url, repoUrl } = await req.json();
 
         if (!diff) {
             return NextResponse.json(
                 { error: 'No diff content provided' },
                 { status: 400 }
             );
+        }
+
+        // Parse repository URL if provided
+        let owner = DEFAULT_OWNER;
+        let repo = DEFAULT_REPO;
+
+        if (repoUrl) {
+            const parsedUrl = parseGitHubUrl(repoUrl);
+            if (parsedUrl) {
+                owner = parsedUrl.owner;
+                repo = parsedUrl.repo;
+            }
         }
 
         let diffContent = diff;
@@ -129,7 +167,7 @@ export async function POST(req: NextRequest) {
         const prNumber = extractPRNumber(id) || extractPRNumber(url || '');
 
         if (prNumber) {
-            const contributors = await getContributorsFromGitHub(prNumber);
+            const contributors = await getContributorsFromGitHub(prNumber, owner, repo);
             if (contributors.length > 0) {
                 const contributorInfo = contributors.map(c =>
                     `${c.name} (@${c.login}) - ${c.role}`

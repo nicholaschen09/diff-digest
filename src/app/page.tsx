@@ -20,6 +20,7 @@ export default function Home() {
   const [repo, setRepo] = usePersistedState<string>("persisted-repo", "");
   const [perPage, setPerPage] = usePersistedState<number>("persisted-perPage", 10);
   const [page, setPage] = usePersistedState<number>("persisted-page", 1);
+  const [repoUrl, setRepoUrl] = usePersistedState<string>("persisted-repoUrl", "");
 
   const diffCardRefs = useRef<Record<string, DiffCardRefMethods>>({});
 
@@ -35,6 +36,7 @@ export default function Home() {
     setRepo("");
     setPerPage(10);
     setPage(1);
+    setRepoUrl("");
     // Clear all localStorage items that start with "persisted-"
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith("persisted-")) {
@@ -139,6 +141,27 @@ export default function Home() {
           <p className="text-gray-300 text-lg max-w-2xl mx-auto">
             Transform Git diffs into dual-tone release notes with AI assistance
           </p>
+
+          {/* GitHub Repo URL Input Section */}
+          <div className="flex flex-col items-center mt-6 mb-2">
+            <label htmlFor="repoUrl" className="text-sm text-gray-400 mb-1">Paste GitHub Repository URL</label>
+            <input
+              id="repoUrl"
+              type="text"
+              value={repoUrl}
+              onChange={(e) => {
+                setRepoUrl(e.target.value);
+                // Try to parse the URL and set owner/repo if valid
+                const match = e.target.value.match(/github\.com\/([^\/]+)\/([^\/]+)(?:\.git)?/);
+                if (match) {
+                  setOwner(match[1]);
+                  setRepo(match[2].replace('.git', ''));
+                }
+              }}
+              placeholder="e.g., https://github.com/openai/openai-node"
+              className="px-4 py-2 border border-zinc-700 rounded-md bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full max-w-md"
+            />
+          </div>
         </div>
 
         {/* Controls Section */}
