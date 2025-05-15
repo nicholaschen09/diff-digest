@@ -289,14 +289,22 @@ export default function Home() {
           <h2 className="text-2xl font-semibold mb-6 text-white border-b border-zinc-700/50 pb-3 flex items-center justify-between">
             <span>Merged Pull Requests</span>
             <div className="flex items-center gap-2">
-              {/* Search bar */}
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search PRs or diffs..."
-                className="w-[220px] h-[36px] px-3 py-1 text-base rounded-lg bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 mr-2"
-              />
+              {/* Search bar with icon */}
+              <div className="relative mr-2">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search PRs or diffs..."
+                  className="w-[220px] h-[36px] pl-10 pr-3 py-1 text-base rounded-lg bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
               <div className="relative mr-2 self-center" style={{ width: 150 }}>
                 <Listbox value={reverseOrder ? "oldest" : "newest"} onChange={val => setReverseOrder(val === "oldest")}>
                   {({ open }) => (
