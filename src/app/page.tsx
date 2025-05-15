@@ -24,6 +24,8 @@ export default function Home() {
   const [repoUrl, setRepoUrl] = usePersistedState<string>("persisted-repoUrl", "");
   const [reverseOrder, setReverseOrder] = usePersistedState<boolean>("persisted-reverseOrder", false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showInfo, setShowInfo] = useState(false);
+  const infoRef = useRef<HTMLDivElement>(null);
 
   const diffCardRefs = useRef<Record<string, DiffCardRefMethods>>({});
 
@@ -144,6 +146,18 @@ export default function Home() {
       (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (item.diff && item.diff.toLowerCase().includes(searchQuery.toLowerCase()))
     );
+
+  // Hide tooltip on outside click (mobile)
+  useEffect(() => {
+    if (!showInfo) return;
+    function handleClick(e: MouseEvent) {
+      if (infoRef.current && !infoRef.current.contains(e.target as Node)) {
+        setShowInfo(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showInfo]);
 
   return (
     <main className="flex min-h-screen flex-col items-center p-4 sm:p-12 bg-zinc-900">
@@ -281,11 +295,25 @@ export default function Home() {
         <div className="border border-zinc-700/50 rounded-xl p-6 min-h-[300px] bg-zinc-800/50 backdrop-blur-sm shadow-xl">
           <h2 className="text-2xl font-semibold mb-2 text-white border-b border-zinc-700/50 pb-3 flex items-center justify-between">
             <span>Merged Pull Requests</span>
-            <div className="group relative flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 hover:text-white cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-4m0-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div className="absolute top-1/2 right-full transform -translate-y-1/2 mr-2 w-80 p-4 bg-zinc-800 rounded-lg shadow-xl border border-zinc-700 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 z-50">
+            <div
+              className="group relative flex-shrink-0"
+              ref={infoRef}
+            >
+              <button
+                type="button"
+                aria-label="Show info"
+                className="focus:outline-none"
+                onClick={() => setShowInfo((v) => !v)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 hover:text-white cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-4m0-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+              <div className={
+                `absolute top-1/2 right-full transform -translate-y-1/2 mr-2 w-80 p-4 bg-zinc-800 rounded-lg shadow-xl border border-zinc-700 z-50
+                ${showInfo ? 'visible opacity-100' : 'invisible opacity-0'}
+                group-hover:visible group-hover:opacity-100 transition-all duration-200`
+              }>
                 <h3 className="font-semibold text-white mb-2">About Diff Digest</h3>
                 <p className="text-sm text-gray-300 mb-2">
                   Diff Digest helps you generate dual-tone release notes from any GitHub repository's pull requests. Here's how it works:
