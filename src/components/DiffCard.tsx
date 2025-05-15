@@ -204,8 +204,8 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
         }));
 
         return (
-            <div className="border border-zinc-700/50 rounded-lg overflow-hidden bg-zinc-800/70 shadow-lg transition-all hover:shadow-xl">
-                <div className="flex justify-between items-start p-4 bg-zinc-800 border-b border-zinc-700/50">
+            <div className="border border-zinc-700/50 rounded-lg overflow-hidden bg-zinc-800/70 shadow-lg transition-all hover:shadow-xl w-full">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start p-4 bg-zinc-800 border-b border-zinc-700/50">
                     <div>
                         <h3 className="text-lg font-semibold flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5 text-white" viewBox="0 0 24 24" fill="currentColor">
@@ -222,12 +222,12 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                         </h3>
                         <p className="text-gray-400 mt-1 text-sm">{description}</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col md:flex-row gap-2 mt-4 md:mt-0 w-full md:w-auto">
                         <button
                             onClick={() => setIsExpanded(!isExpanded)}
                             className={cn(
                                 buttonBaseStyle,
-                                "bg-zinc-700 text-white hover:bg-zinc-600 w-[125px]"
+                                "bg-zinc-700 text-white hover:bg-zinc-600 w-full md:w-[125px]"
                             )}
                         >
                             {isExpanded ? (
@@ -254,7 +254,7 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                 notes.streamProgress.isGenerating
                                     ? "bg-blue-700/70 text-white cursor-wait"
                                     : "bg-blue-600 text-white hover:bg-blue-500",
-                                "w-[140px]"
+                                "w-full md:w-[140px]"
                             )}
                         >
                             {notes.streamProgress.isGenerating ? (
@@ -279,7 +279,7 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                 onClick={handleCloseNotes}
                                 className={cn(
                                     buttonBaseStyle,
-                                    "bg-red-600 text-white hover:bg-red-500"
+                                    "bg-red-600 text-white hover:bg-red-500 w-full md:w-auto"
                                 )}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
