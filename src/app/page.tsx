@@ -1,13 +1,12 @@
 "use client"; // Mark as a Client Component
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useState, Fragment } from "react";
 import DiffCard from "@/components/DiffCard";
 import { usePersistedState } from "@/lib/usePersistedState";
 import { cn } from "@/lib/utils";
 import type { DiffItem, ApiResponse } from '@/types/api';
 import type { DiffCardRefMethods } from '@/types/diff';
 import { Listbox } from '@headlessui/react';
-import { Fragment } from 'react';
 
 export default function Home() {
   // Replace useState with usePersistedState for state that should persist across refreshes
@@ -24,6 +23,7 @@ export default function Home() {
   const [page, setPage] = usePersistedState<number | undefined>("persisted-page", undefined);
   const [repoUrl, setRepoUrl] = usePersistedState<string>("persisted-repoUrl", "");
   const [reverseOrder, setReverseOrder] = usePersistedState<boolean>("persisted-reverseOrder", false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const diffCardRefs = useRef<Record<string, DiffCardRefMethods>>({});
 
@@ -143,6 +143,14 @@ export default function Home() {
       diffCardRefs.current[id] = methods;
     }
   };
+
+  // Filter diffs based on search query
+  const filteredDiffs = searchQuery.trim() === ""
+    ? diffs
+    : diffs.filter(item =>
+      (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (item.diff && item.diff.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
 
   return (
     <main className="flex min-h-screen flex-col items-center p-4 sm:p-12 bg-zinc-900">
@@ -281,6 +289,14 @@ export default function Home() {
           <h2 className="text-2xl font-semibold mb-6 text-white border-b border-zinc-700/50 pb-3 flex items-center justify-between">
             <span>Merged Pull Requests</span>
             <div className="flex items-center gap-2">
+              {/* Search bar */}
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search PRs or diffs..."
+                className="w-[220px] h-[36px] px-3 py-1 text-base rounded-lg bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 mr-2"
+              />
               <div className="relative mr-2 self-center" style={{ width: 150 }}>
                 <Listbox value={reverseOrder ? "oldest" : "newest"} onChange={val => setReverseOrder(val === "oldest")}>
                   {({ open }) => (
@@ -387,9 +403,9 @@ export default function Home() {
             </div>
           )}
 
-          {diffs.length > 0 && (
+          {filteredDiffs.length > 0 && (
             <div className="space-y-6">
-              {diffs.map((item) => (
+              {filteredDiffs.map((item) => (
                 <DiffCard
                   key={item.id}
                   id={item.id}
