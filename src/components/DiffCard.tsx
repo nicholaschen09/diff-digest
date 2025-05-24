@@ -45,6 +45,8 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
 
         // State for diff search
         const [searchQuery, setSearchQuery] = useState('');
+        // State for copy feedback
+        const [copied, setCopied] = useState(false);
 
         // Helper to highlight matches in a line
         function highlightMatches(line: string, query: string) {
@@ -57,6 +59,17 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                     : part
             );
         }
+
+        // Copy diff to clipboard
+        const handleCopyDiff = async () => {
+            try {
+                await navigator.clipboard.writeText(diff);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1200);
+            } catch (e) {
+                setCopied(false);
+            }
+        };
 
         // Memoize fetchContributorData to prevent unnecessary re-renders
         const fetchContributorData = useCallback(async () => {
@@ -441,7 +454,7 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
 
                 {isExpanded && (
                     <div className="p-3 bg-zinc-900/70 border-b border-zinc-700/50 overflow-auto max-h-64 text-xs font-mono">
-                        {/* Diff search input */}
+                        {/* Diff search and copy controls */}
                         <div className="mb-2 flex items-center gap-2">
                             <input
                                 type="text"
@@ -450,6 +463,23 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                 placeholder="Search diff..."
                                 className="w-full max-w-xs px-2 py-1 rounded bg-zinc-800 border border-zinc-600 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
+                            <button
+                                onClick={handleCopyDiff}
+                                className="ml-2 px-2 py-1 rounded bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 text-white flex items-center gap-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                title="Copy diff to clipboard"
+                            >
+                                {copied ? (
+                                    <svg className="h-4 w-4 text-green-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                ) : (
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                                    </svg>
+                                )}
+                                <span>{copied ? 'Copied!' : 'Copy'}</span>
+                            </button>
                         </div>
                         {diffView === 'unified' ? (
                             <div>
