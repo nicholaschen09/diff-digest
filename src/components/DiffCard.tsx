@@ -27,6 +27,21 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
             contributorData: []
         });
 
+        // Add state for diff view mode
+        const [diffView, setDiffView] = useState<'unified' | 'split'>(() => {
+            if (typeof window !== 'undefined') {
+                const stored = localStorage.getItem(`diff-view-${id}`);
+                return stored === 'split' ? 'split' : 'unified';
+            }
+            return 'unified';
+        });
+        // Persist diff view mode
+        useEffect(() => {
+            if (typeof window !== 'undefined') {
+                localStorage.setItem(`diff-view-${id}`, diffView);
+            }
+        }, [diffView, id]);
+
         // Memoize fetchContributorData to prevent unnecessary re-renders
         const fetchContributorData = useCallback(async () => {
             // Add checks to prevent unnecessary fetches
@@ -197,6 +212,27 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
             });
         };
 
+        // Helper to parse diff into split lines
+        function parseDiffToSplit(diff: string) {
+            // Simple line-based split: left = removed/unchanged, right = added/unchanged
+            const lines = diff.split('\n');
+            const left: string[] = [];
+            const right: string[] = [];
+            lines.forEach(line => {
+                if (line.startsWith('-') && !line.startsWith('---')) {
+                    left.push(line.substring(1));
+                    right.push('');
+                } else if (line.startsWith('+') && !line.startsWith('+++')) {
+                    left.push('');
+                    right.push(line.substring(1));
+                } else {
+                    left.push(line.startsWith(' ') ? line.substring(1) : line);
+                    right.push(line.startsWith(' ') ? line.substring(1) : line);
+                }
+            });
+            return { left, right };
+        }
+
         // Expose methods to parent component
         useImperativeHandle(ref, () => ({
             generateNotes: handleGenerateNotes,
@@ -246,6 +282,21 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                 </>
                             )}
                         </button>
+                        {/* Diff view dropdown */}
+                        <select
+                            value={diffView}
+                            onChange={e => setDiffView(e.target.value as 'unified' | 'split')}
+                            className={cn(
+                                buttonBaseStyle,
+                                'bg-zinc-700 text-white w-full md:w-[140px] px-2 py-1 rounded-md border border-zinc-600',
+                                'focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            )}
+                            style={{ minWidth: 120 }}
+                            aria-label="Diff view mode"
+                        >
+                            <option value="unified">Unified</option>
+                            <option value="split">Side-by-Side</option>
+                        </select>
                         <button
                             onClick={handleGenerateNotes}
                             disabled={notes.streamProgress.isGenerating}
@@ -293,7 +344,31 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
 
                 {isExpanded && (
                     <div className="p-3 bg-zinc-900/70 border-b border-zinc-700/50 overflow-auto max-h-64 text-xs font-mono">
-                        <pre className="whitespace-pre-wrap break-words text-gray-300">{diff}</pre>
+                        {diffView === 'unified' ? (
+                            <pre className="whitespace-pre-wrap break-words text-gray-300">{diff}</pre>
+                        ) : (
+                            (() => {
+                                const { left, right } = parseDiffToSplit(diff);
+                                return (
+                                    <div className="flex w-full text-xs font-mono border border-zinc-700 rounded overflow-x-auto bg-zinc-900">
+                                        <div className="w-1/2 border-r border-zinc-700 p-2">
+                                            {left.map((line, i) => (
+                                                <div key={i} className={line ? (right[i] ? 'text-gray-300' : 'bg-red-900/30 text-red-300') : 'bg-transparent'}>
+                                                    {line || '\u00A0'}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="w-1/2 p-2">
+                                            {right.map((line, i) => (
+                                                <div key={i} className={line ? (left[i] ? 'text-gray-300' : 'bg-green-900/30 text-green-300') : 'bg-transparent'}>
+                                                    {line || '\u00A0'}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()
+                        )}
                     </div>
                 )}
 
