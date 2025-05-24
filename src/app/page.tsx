@@ -361,7 +361,7 @@ export default function Home() {
             <div className="relative sm:mr-2 self-center w-full sm:w-auto">
               <Listbox value={reverseOrder ? "oldest" : "newest"} onChange={val => setReverseOrder(val === "oldest")}>
                 {({ open }) => (
-                  <Fragment>
+                  <div>
                     <Listbox.Button className="w-full h-[36px] px-3 py-1 text-base font-medium rounded-lg bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 flex items-center whitespace-nowrap relative">
                       <span
                         className="whitespace-nowrap text-left overflow-hidden text-ellipsis"
@@ -393,7 +393,7 @@ export default function Home() {
                         Oldest First
                       </Listbox.Option>
                     </Listbox.Options>
-                  </Fragment>
+                  </div>
                 )}
               </Listbox>
             </div>
