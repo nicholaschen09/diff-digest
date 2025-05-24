@@ -4,7 +4,7 @@ import { usePersistedState } from '@/lib/usePersistedState';
 import { buttonBaseStyle } from '@/lib/styles';
 import { parseNotes } from '@/lib/noteParser';
 import type { DiffCardProps, NoteState } from '@/types/diff';
-import { Listbox } from '@headlessui/react';
+import { Listbox, Menu } from '@headlessui/react';
 
 export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: () => void }, DiffCardProps>(
     ({ id, description, diff, url, owner, repo }, ref) => {
@@ -260,29 +260,47 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                         <p className="text-gray-400 mt-1 text-sm">{description}</p>
                     </div>
                     <div className="flex flex-col md:flex-row gap-2 mt-4 md:mt-0 w-full md:w-auto">
-                        <button
-                            onClick={() => setIsExpanded(!isExpanded)}
-                            className={cn(
-                                buttonBaseStyle,
-                                "bg-zinc-700 text-white hover:bg-zinc-600 w-full md:w-[125px]"
-                            )}
-                        >
-                            {isExpanded ? (
-                                <>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+                        {/* Show/Hide Details dropdown using Headless UI Menu */}
+                        <div className="relative w-full md:w-[125px]">
+                            <Menu as="div" className="relative inline-block text-left w-full">
+                                <Menu.Button className={cn(
+                                    buttonBaseStyle,
+                                    "bg-zinc-700 text-white hover:bg-zinc-600 w-full text-sm h-[32px] px-3 py-1 font-medium rounded-lg border border-zinc-600 flex items-center justify-between"
+                                )}>
+                                    <span className="flex items-center">
+                                        {isExpanded ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+                                            </svg>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                                            </svg>
+                                        )}
+                                        {isExpanded ? 'Hide Details' : 'Show Details'}
+                                    </span>
+                                    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                                     </svg>
-                                    Hide Details
-                                </>
-                            ) : (
-                                <>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                                    </svg>
-                                    Show Details
-                                </>
-                            )}
-                        </button>
+                                </Menu.Button>
+                                <Menu.Items className="absolute left-0 mt-1 w-full rounded-lg bg-zinc-800 border border-zinc-700 shadow-xl z-50 focus:outline-none">
+                                    <Menu.Item>
+                                        {({ active }) => (
+                                            <button
+                                                onClick={() => setIsExpanded(!isExpanded)}
+                                                className={cn(
+                                                    'w-full text-left px-4 py-2 text-sm',
+                                                    active ? 'bg-zinc-700 text-white' : 'text-gray-200',
+                                                    'rounded-lg'
+                                                )}
+                                            >
+                                                {isExpanded ? 'Hide Details' : 'Show Details'}
+                                            </button>
+                                        )}
+                                    </Menu.Item>
+                                </Menu.Items>
+                            </Menu>
+                        </div>
                         {/* Diff view dropdown using Headless UI Listbox */}
                         <div className="relative w-full md:w-[140px]">
                             <Listbox value={diffView} onChange={setDiffView}>
