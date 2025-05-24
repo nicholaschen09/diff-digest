@@ -374,7 +374,7 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                         <div className="relative w-full md:w-[140px]">
                             <Listbox value={diffView} onChange={setDiffView}>
                                 {({ open }) => (
-                                    <>
+                                    <div>
                                         <Listbox.Button className="w-full h-[32px] px-3 py-1 text-sm font-medium rounded-lg bg-zinc-700 text-white border border-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 flex items-center whitespace-nowrap relative">
                                             <span className="whitespace-nowrap text-left overflow-hidden text-ellipsis" style={{ width: 110, display: 'inline-block' }}>
                                                 {diffView === 'split' ? 'Side-by-Side' : 'Unified'}
@@ -403,7 +403,7 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                                 Side-by-Side
                                             </Listbox.Option>
                                         </Listbox.Options>
-                                    </>
+                                    </div>
                                 )}
                             </Listbox>
                         </div>
