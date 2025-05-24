@@ -265,23 +265,25 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                             <Menu as="div" className="relative inline-block text-left w-full">
                                 <Menu.Button className={cn(
                                     buttonBaseStyle,
-                                    "bg-zinc-700 text-white hover:bg-zinc-600 w-full text-sm h-[32px] px-3 py-1 font-medium rounded-lg border border-zinc-600 flex items-center justify-between"
+                                    "bg-zinc-700 text-white hover:bg-zinc-600 w-full text-sm h-[32px] px-3 py-1 font-medium rounded-lg border border-zinc-600 flex items-center justify-center gap-2 whitespace-nowrap"
                                 )}>
-                                    <span className="flex items-center">
+                                    <span className="flex items-center gap-1">
                                         {isExpanded ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                                 <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
                                             </svg>
                                         ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                                 <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                                             </svg>
                                         )}
-                                        {isExpanded ? 'Hide Details' : 'Show Details'}
+                                        <span>{isExpanded ? 'Hide Details' : 'Show Details'}</span>
                                     </span>
-                                    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                    </svg>
+                                    <span className="ml-2 flex items-center">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </span>
                                 </Menu.Button>
                                 <Menu.Items className="absolute left-0 mt-1 w-full rounded-lg bg-zinc-800 border border-zinc-700 shadow-xl z-50 focus:outline-none">
                                     <Menu.Item>
