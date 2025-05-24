@@ -421,20 +421,9 @@ export default function Home() {
             </div>
           )}
 
-          {initialFetchDone && diffs.length === 0 && !isLoading && !error && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-gray-400">
-                No merged pull requests found or fetched.
-              </p>
-            </div>
-          )}
-
-          {filteredDiffs.length > 0 && (
-            <div className="space-y-6">
-              {filteredDiffs.map((item) => (
+          <div className="space-y-6">
+            {filteredDiffs.length > 0 ? (
+              filteredDiffs.map((item) => (
                 <DiffCard
                   key={item.id}
                   id={item.id}
@@ -445,9 +434,20 @@ export default function Home() {
                   repo={repo}
                   ref={(methods) => registerDiffCard(item.id, methods)}
                 />
-              ))}
-            </div>
-          )}
+              ))
+            ) : (
+              initialFetchDone && !isLoading && !error && (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-gray-400">
+                    No merged pull requests found or fetched.
+                  </p>
+                </div>
+              )
+            )}
+          </div>
 
           {isLoading && (
             <div className="flex justify-center items-center my-12">
