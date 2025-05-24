@@ -278,13 +278,17 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                 </Menu.Button>
                                 <Menu.Items className="absolute left-0 mt-1 w-full rounded-lg bg-zinc-800 border border-zinc-700 shadow-xl z-50 focus:outline-none">
                                     <Menu.Item>
-                                        {({ active }) => (
+                                        {(props) => (
                                             <button
-                                                onClick={() => setIsExpanded(true)}
+                                                onClick={e => {
+                                                    setIsExpanded(true);
+                                                    if (props.close) props.close();
+                                                    else e.currentTarget.blur();
+                                                }}
                                                 className={cn(
                                                     'w-full text-left px-4 py-2 text-sm',
-                                                    active ? 'bg-zinc-700 text-white' : 'text-gray-200',
-                                                    !isExpanded ? 'font-bold' : 'font-normal',
+                                                    props.active ? 'bg-zinc-700 text-white' : 'text-gray-200',
+                                                    isExpanded ? 'font-bold' : 'font-normal',
                                                     'rounded-lg'
                                                 )}
                                             >
@@ -293,13 +297,17 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                         )}
                                     </Menu.Item>
                                     <Menu.Item>
-                                        {({ active }) => (
+                                        {(props) => (
                                             <button
-                                                onClick={() => setIsExpanded(false)}
+                                                onClick={e => {
+                                                    setIsExpanded(false);
+                                                    if (props.close) props.close();
+                                                    else e.currentTarget.blur();
+                                                }}
                                                 className={cn(
                                                     'w-full text-left px-4 py-2 text-sm',
-                                                    active ? 'bg-zinc-700 text-white' : 'text-gray-200',
-                                                    isExpanded ? 'font-bold' : 'font-normal',
+                                                    props.active ? 'bg-zinc-700 text-white' : 'text-gray-200',
+                                                    !isExpanded ? 'font-bold' : 'font-normal',
                                                     'rounded-lg'
                                                 )}
                                             >
