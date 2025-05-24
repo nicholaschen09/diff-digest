@@ -4,6 +4,7 @@ import { usePersistedState } from '@/lib/usePersistedState';
 import { buttonBaseStyle } from '@/lib/styles';
 import { parseNotes } from '@/lib/noteParser';
 import type { DiffCardProps, NoteState } from '@/types/diff';
+import { Listbox } from '@headlessui/react';
 
 export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNotes: () => void }, DiffCardProps>(
     ({ id, description, diff, url, owner, repo }, ref) => {
@@ -282,21 +283,43 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                 </>
                             )}
                         </button>
-                        {/* Diff view dropdown */}
-                        <select
-                            value={diffView}
-                            onChange={e => setDiffView(e.target.value as 'unified' | 'split')}
-                            className={cn(
-                                buttonBaseStyle,
-                                'bg-zinc-700 text-white w-full md:w-[140px] px-2 py-1 rounded-md border border-zinc-600',
-                                'focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            )}
-                            style={{ minWidth: 120 }}
-                            aria-label="Diff view mode"
-                        >
-                            <option value="unified">Unified</option>
-                            <option value="split">Side-by-Side</option>
-                        </select>
+                        {/* Diff view dropdown using Headless UI Listbox */}
+                        <div className="relative w-full md:w-[140px]">
+                            <Listbox value={diffView} onChange={setDiffView}>
+                                {({ open }) => (
+                                    <>
+                                        <Listbox.Button className="w-full h-[32px] px-3 py-1 text-sm font-medium rounded-lg bg-zinc-700 text-white border border-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 flex items-center whitespace-nowrap relative">
+                                            <span className="whitespace-nowrap text-left overflow-hidden text-ellipsis" style={{ width: 110, display: 'inline-block' }}>
+                                                {diffView === 'split' ? 'Side-by-Side' : 'Unified'}
+                                            </span>
+                                            <span className="pointer-events-none flex items-center justify-center absolute right-3 top-1/2 -translate-y-1/2" style={{ width: 22 }}>
+                                                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </span>
+                                        </Listbox.Button>
+                                        <Listbox.Options className="absolute left-0 mt-1 w-full rounded-lg bg-zinc-800 border border-zinc-700 shadow-xl z-50 focus:outline-none" style={{ width: 150 }}>
+                                            <Listbox.Option
+                                                value="unified"
+                                                className={({ active, selected }) =>
+                                                    `cursor-pointer select-none px-4 py-2 text-sm ${active ? 'bg-zinc-700 text-white' : 'text-gray-200'} ${selected ? 'font-bold' : ''}`
+                                                }
+                                            >
+                                                Unified
+                                            </Listbox.Option>
+                                            <Listbox.Option
+                                                value="split"
+                                                className={({ active, selected }) =>
+                                                    `cursor-pointer select-none px-4 py-2 text-sm ${active ? 'bg-zinc-700 text-white' : 'text-gray-200'} ${selected ? 'font-bold' : ''}`
+                                                }
+                                            >
+                                                Side-by-Side
+                                            </Listbox.Option>
+                                        </Listbox.Options>
+                                    </>
+                                )}
+                            </Listbox>
+                        </div>
                         <button
                             onClick={handleGenerateNotes}
                             disabled={notes.streamProgress.isGenerating}
