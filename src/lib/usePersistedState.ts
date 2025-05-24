@@ -7,7 +7,7 @@ export function usePersistedState<T>(key: string, initialValue: T): [T, (value: 
         if (typeof window === 'undefined') return initialValue;
         try {
             const item = window.localStorage.getItem(key);
-            return item ? JSON.parse(item) : initialValue;
+            return item && item !== "undefined" ? JSON.parse(item) : initialValue;
         } catch (error) {
             console.error('Error reading from localStorage:', error);
             return initialValue;
