@@ -213,25 +213,49 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
             });
         };
 
-        // Helper to parse diff into split lines
-        function parseDiffToSplit(diff: string) {
-            // Simple line-based split: left = removed/unchanged, right = added/unchanged
+        // Helper to parse diff into split lines with line numbers
+        function parseDiffToSplitWithLineNumbers(diff: string) {
             const lines = diff.split('\n');
-            const left: string[] = [];
-            const right: string[] = [];
+            const left: { line: string; number: number | null }[] = [];
+            const right: { line: string; number: number | null }[] = [];
+            let leftNum = 1;
+            let rightNum = 1;
             lines.forEach(line => {
                 if (line.startsWith('-') && !line.startsWith('---')) {
-                    left.push(line.substring(1));
-                    right.push('');
+                    left.push({ line: line.substring(1), number: leftNum++ });
+                    right.push({ line: '', number: null });
                 } else if (line.startsWith('+') && !line.startsWith('+++')) {
-                    left.push('');
-                    right.push(line.substring(1));
+                    left.push({ line: '', number: null });
+                    right.push({ line: line.substring(1), number: rightNum++ });
                 } else {
-                    left.push(line.startsWith(' ') ? line.substring(1) : line);
-                    right.push(line.startsWith(' ') ? line.substring(1) : line);
+                    const content = line.startsWith(' ') ? line.substring(1) : line;
+                    left.push({ line: content, number: leftNum });
+                    right.push({ line: content, number: rightNum });
+                    leftNum++;
+                    rightNum++;
                 }
             });
             return { left, right };
+        }
+        // Helper for unified diff with line numbers
+        function parseDiffUnifiedWithLineNumbers(diff: string) {
+            const lines = diff.split('\n');
+            let leftNum = 1;
+            let rightNum = 1;
+            return lines.map(line => {
+                if (line.startsWith('-') && !line.startsWith('---')) {
+                    return { line: line, left: leftNum++, right: null };
+                } else if (line.startsWith('+') && !line.startsWith('+++')) {
+                    return { line: line, left: null, right: rightNum++ };
+                } else {
+                    const content = line.startsWith(' ') ? line.substring(1) : line;
+                    const ln = leftNum;
+                    const rn = rightNum;
+                    leftNum++;
+                    rightNum++;
+                    return { line: ' ' + content, left: ln, right: rn };
+                }
+            });
         }
 
         // Expose methods to parent component
@@ -403,23 +427,47 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                 {isExpanded && (
                     <div className="p-3 bg-zinc-900/70 border-b border-zinc-700/50 overflow-auto max-h-64 text-xs font-mono">
                         {diffView === 'unified' ? (
-                            <pre className="whitespace-pre-wrap break-words text-gray-300">{diff}</pre>
+                            <div>
+                                {parseDiffUnifiedWithLineNumbers(diff).map((entry, i) => (
+                                    <div key={i} className="flex">
+                                        <span className="w-10 text-right pr-2 text-zinc-500 select-none">
+                                            {entry.left !== null ? entry.left : ''}
+                                        </span>
+                                        <span className="w-10 text-right pr-2 text-zinc-500 select-none">
+                                            {entry.right !== null ? entry.right : ''}
+                                        </span>
+                                        <span className={
+                                            entry.line.startsWith('-') && !entry.line.startsWith('---') ? 'text-red-300' :
+                                                entry.line.startsWith('+') && !entry.line.startsWith('+++') ? 'text-green-300' :
+                                                    'text-gray-300'
+                                        }>
+                                            {entry.line}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
                         ) : (
                             (() => {
-                                const { left, right } = parseDiffToSplit(diff);
+                                const { left, right } = parseDiffToSplitWithLineNumbers(diff);
                                 return (
                                     <div className="flex w-full text-xs font-mono border border-zinc-700 rounded overflow-x-auto bg-zinc-900">
                                         <div className="w-1/2 border-r border-zinc-700 p-2">
-                                            {left.map((line, i) => (
-                                                <div key={i} className={line ? (right[i] ? 'text-gray-300' : 'bg-red-900/30 text-red-300') : 'bg-transparent'}>
-                                                    {line || '\u00A0'}
+                                            {left.map((entry, i) => (
+                                                <div key={i} className={entry.line ? (right[i].line ? 'text-gray-300' : 'bg-red-900/30 text-red-300') : 'bg-transparent flex'}>
+                                                    <span className="w-10 text-right pr-2 text-zinc-500 select-none">
+                                                        {entry.number !== null ? entry.number : ''}
+                                                    </span>
+                                                    <span>{entry.line || '\u00A0'}</span>
                                                 </div>
                                             ))}
                                         </div>
                                         <div className="w-1/2 p-2">
-                                            {right.map((line, i) => (
-                                                <div key={i} className={line ? (left[i] ? 'text-gray-300' : 'bg-green-900/30 text-green-300') : 'bg-transparent'}>
-                                                    {line || '\u00A0'}
+                                            {right.map((entry, i) => (
+                                                <div key={i} className={entry.line ? (left[i].line ? 'text-gray-300' : 'bg-green-900/30 text-green-300') : 'bg-transparent flex'}>
+                                                    <span className="w-10 text-right pr-2 text-zinc-500 select-none">
+                                                        {entry.number !== null ? entry.number : ''}
+                                                    </span>
+                                                    <span>{entry.line || '\u00A0'}</span>
                                                 </div>
                                             ))}
                                         </div>
