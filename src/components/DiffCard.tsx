@@ -265,21 +265,12 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                             <Menu as="div" className="relative inline-block text-left w-full">
                                 <Menu.Button className={cn(
                                     buttonBaseStyle,
-                                    "bg-zinc-700 text-white hover:bg-zinc-600 w-full text-sm h-[32px] px-3 py-1 font-medium rounded-lg border border-zinc-600 flex items-center justify-center gap-2 whitespace-nowrap"
+                                    "bg-zinc-700 text-white hover:bg-zinc-600 w-full text-sm h-[32px] px-2 py-1 font-medium rounded-lg border border-zinc-600 flex items-center justify-center gap-1 whitespace-nowrap"
                                 )}>
                                     <span className="flex items-center gap-1">
-                                        {isExpanded ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
-                                            </svg>
-                                        ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                                            </svg>
-                                        )}
                                         <span>{isExpanded ? 'Hide Details' : 'Show Details'}</span>
                                     </span>
-                                    <span className="ml-2 flex items-center">
+                                    <span className="flex items-center">
                                         <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                                         </svg>
@@ -289,14 +280,30 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                     <Menu.Item>
                                         {({ active }) => (
                                             <button
-                                                onClick={() => setIsExpanded(!isExpanded)}
+                                                onClick={() => setIsExpanded(true)}
                                                 className={cn(
                                                     'w-full text-left px-4 py-2 text-sm',
                                                     active ? 'bg-zinc-700 text-white' : 'text-gray-200',
+                                                    !isExpanded ? 'font-bold' : 'font-normal',
                                                     'rounded-lg'
                                                 )}
                                             >
-                                                {isExpanded ? 'Hide Details' : 'Show Details'}
+                                                Show Details
+                                            </button>
+                                        )}
+                                    </Menu.Item>
+                                    <Menu.Item>
+                                        {({ active }) => (
+                                            <button
+                                                onClick={() => setIsExpanded(false)}
+                                                className={cn(
+                                                    'w-full text-left px-4 py-2 text-sm',
+                                                    active ? 'bg-zinc-700 text-white' : 'text-gray-200',
+                                                    isExpanded ? 'font-bold' : 'font-normal',
+                                                    'rounded-lg'
+                                                )}
+                                            >
+                                                Hide Details
                                             </button>
                                         )}
                                     </Menu.Item>
