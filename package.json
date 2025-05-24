@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "docker:dev": "docker-compose up dev",
+    "docker:prod": "docker-compose up prod",
+    "docker:build": "docker-compose build",
+    "docker:down": "docker-compose down",
+    "docker:clean": "docker-compose down -v --remove-orphans"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.3",
