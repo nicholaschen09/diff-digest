@@ -43,6 +43,21 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
             }
         }, [diffView, id]);
 
+        // State for diff search
+        const [searchQuery, setSearchQuery] = useState('');
+
+        // Helper to highlight matches in a line
+        function highlightMatches(line: string, query: string) {
+            if (!query) return line;
+            const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            const parts = line.split(regex);
+            return parts.map((part, i) =>
+                regex.test(part)
+                    ? <mark key={i} className="bg-yellow-400 text-black px-0.5 rounded">{part}</mark>
+                    : part
+            );
+        }
+
         // Memoize fetchContributorData to prevent unnecessary re-renders
         const fetchContributorData = useCallback(async () => {
             // Add checks to prevent unnecessary fetches
@@ -426,6 +441,16 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
 
                 {isExpanded && (
                     <div className="p-3 bg-zinc-900/70 border-b border-zinc-700/50 overflow-auto max-h-64 text-xs font-mono">
+                        {/* Diff search input */}
+                        <div className="mb-2 flex items-center gap-2">
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                placeholder="Search diff..."
+                                className="w-full max-w-xs px-2 py-1 rounded bg-zinc-800 border border-zinc-600 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
                         {diffView === 'unified' ? (
                             <div>
                                 {parseDiffUnifiedWithLineNumbers(diff).map((entry, i) => (
@@ -441,7 +466,7 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                                 entry.line.startsWith('+') && !entry.line.startsWith('+++') ? 'text-green-300' :
                                                     'text-gray-300'
                                         }>
-                                            {entry.line}
+                                            {highlightMatches(entry.line, searchQuery)}
                                         </span>
                                     </div>
                                 ))}
@@ -457,7 +482,7 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                                     <span className="w-10 text-right pr-2 text-zinc-500 select-none">
                                                         {entry.number !== null ? entry.number : ''}
                                                     </span>
-                                                    <span>{entry.line || '\u00A0'}</span>
+                                                    <span>{highlightMatches(entry.line, searchQuery) || '\u00A0'}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -467,7 +492,7 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                                     <span className="w-10 text-right pr-2 text-zinc-500 select-none">
                                                         {entry.number !== null ? entry.number : ''}
                                                     </span>
-                                                    <span>{entry.line || '\u00A0'}</span>
+                                                    <span>{highlightMatches(entry.line, searchQuery) || '\u00A0'}</span>
                                                 </div>
                                             ))}
                                         </div>
