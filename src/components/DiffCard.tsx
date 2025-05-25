@@ -486,10 +486,10 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                 {parseDiffUnifiedWithLineNumbers(diff).map((entry, i) => (
                                     <div key={i} className="flex">
                                         <span className="w-10 text-right pr-2 text-zinc-500 select-none">
-                                            {entry.left !== null ? entry.left : ''}
-                                        </span>
-                                        <span className="w-10 text-right pr-2 text-zinc-500 select-none">
-                                            {entry.right !== null ? entry.right : ''}
+                                            {entry.left !== null && entry.right === null
+                                                ? entry.left
+                                                : entry.right
+                                            }
                                         </span>
                                         <span className={
                                             entry.line.startsWith('-') && !entry.line.startsWith('---') ? 'text-red-300' :
