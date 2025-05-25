@@ -8,6 +8,7 @@ import type { DiffItem, ApiResponse } from '@/types/api';
 import type { DiffCardRefMethods } from '@/types/diff';
 import { Listbox } from '@headlessui/react';
 import React from 'react';
+import PRStats from "@/components/PRStats";
 
 export default function Home() {
   // Replace useState with usePersistedState for state that should persist across refreshes
@@ -368,6 +369,8 @@ export default function Home() {
           </div>
         </div>
 
+        {/* PR Stats Section */}
+        <PRStats diffs={diffs} />
         {/* Results Section */}
         <div className="border border-zinc-700/50 rounded-xl p-6 min-h-[300px] bg-zinc-800/50 backdrop-blur-sm shadow-xl">
           <h2 className="text-2xl font-semibold mb-2 text-white border-b border-zinc-700/50 pb-3 flex items-center justify-between">
