@@ -299,7 +299,7 @@ export default function Home() {
                 />
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row items-center gap-2 w-full max-w-2xl mx-auto mt-6 mb-2">
+            <div className="flex justify-center gap-4 w-full max-w-2xl mx-auto mt-6 mb-2">
               <button
                 onClick={handleFetchClick}
                 disabled={isLoading}
