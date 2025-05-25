@@ -355,19 +355,18 @@ export default function Home() {
                 />
               </div>
             </form>
+            {aiAnswer && (
+              <div className="max-w-2xl mx-auto -mb-2 mt-4 bg-zinc-800 border border-blue-700/30 rounded-lg p-4 text-blue-200 text-base whitespace-pre-line">
+                <b>AI Answer:</b> {aiAnswer}
+              </div>
+            )}
+            {aiError && (
+              <div className="max-w-2xl mx-auto mb-4 bg-red-900/20 border border-red-800/30 rounded-lg p-4 text-red-300 text-base">
+                {aiError}
+              </div>
+            )}
           </div>
         </div>
-
-        {aiAnswer && (
-          <div className="max-w-2xl mx-auto mb-4 bg-zinc-800 border border-blue-700/30 rounded-lg p-4 text-blue-200 text-base whitespace-pre-line">
-            <b>AI Answer:</b> {aiAnswer}
-          </div>
-        )}
-        {aiError && (
-          <div className="max-w-2xl mx-auto mb-4 bg-red-900/20 border border-red-800/30 rounded-lg p-4 text-red-300 text-base">
-            {aiError}
-          </div>
-        )}
 
         {/* Results Section */}
         <div className="border border-zinc-700/50 rounded-xl p-6 min-h-[300px] bg-zinc-800/50 backdrop-blur-sm shadow-xl">
