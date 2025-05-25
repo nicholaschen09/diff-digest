@@ -339,7 +339,7 @@ export default function Home() {
               </button>
             </div>
             {/* AI-powered search bar moved below main controls */}
-            <form onSubmit={handleAiSearch} className="flex items-center gap-2 w-full max-w-2xl mx-auto mt-4 mb-2">
+            <form onSubmit={handleAiSearch} className="flex items-center gap-2 w-full max-w-4xl mx-auto mt-4 mb-2">
               <div className="relative w-full">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                   <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -357,7 +357,7 @@ export default function Home() {
               </div>
             </form>
             {aiAnswer && (
-              <div className="max-w-2xl mx-auto -mb-2 mt-4 bg-zinc-800 border border-blue-700/30 rounded-lg p-4 text-blue-200 text-base whitespace-pre-line">
+              <div className="max-w-4xl mx-auto -mb-2 mt-4 bg-zinc-800 border border-blue-700/30 rounded-lg p-4 text-blue-200 text-base whitespace-pre-line">
                 {aiAnswer}
               </div>
             )}

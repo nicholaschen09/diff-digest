@@ -35,7 +35,7 @@ const PRStats: React.FC<PRStatsProps> = ({ diffs }) => {
     const topLanguages = getLanguages(diffs);
 
     return (
-        <div className="max-w-2xl mx-auto mb-6 mt-2 bg-zinc-800 border border-blue-700/30 rounded-lg p-4 text-blue-100 text-base">
+        <div className="max-w-4xl mx-auto mb-6 mt-2 bg-zinc-800 border border-blue-700/30 rounded-lg p-4 text-blue-100 text-base">
             <h3 className="text-lg font-bold mb-2 text-blue-200">PR Stats</h3>
             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-8 gap-2 w-full">
                 <div className="flex flex-row items-center justify-between w-full">
