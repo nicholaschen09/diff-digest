@@ -574,7 +574,7 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                 <div className="bg-cyan-900/10 border border-cyan-700/20 rounded-md p-3">
                                     <h4 className="text-sm font-bold text-cyan-300 mb-2 flex items-center">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3a7 7 0 00-4.95 11.95c.2.2.3.48.25.76A2.99 2.99 0 0012 21a2.99 2.99 0 004.7-5.29.75.75 0 01.25-.76A7 7 0 0012 3zm0 0v1m0 16v1m-4-4h8" />
                                         </svg>
                                         FEEDBACK
                                         {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
@@ -587,7 +587,7 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                 <div className="bg-red-900/10 border border-red-700/20 rounded-md p-3">
                                     <h4 className="text-sm font-bold text-red-300 mb-2 flex items-center">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l7 4v5c0 5.25-3.5 9.75-7 11-3.5-1.25-7-5.75-7-11V7l7-4zm0 4v4m0 4h.01" />
                                         </svg>
                                         SECURITY
                                         {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
@@ -600,7 +600,7 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                 <div className="bg-yellow-900/10 border border-yellow-700/20 rounded-md p-3">
                                     <h4 className="text-sm font-bold text-yellow-300 mb-2 flex items-center">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 20h9M12 4H3m9 0v16m0-16c-4.418 0-8 1.79-8 4v12c0 2.21 3.582 4 8 4s8-1.79 8-4V8c0-2.21-3.582-4-8-4z" />
                                         </svg>
                                         READABILITY
                                         {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
@@ -613,7 +613,7 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                 <div className="bg-indigo-900/10 border border-indigo-700/20 rounded-md p-3">
                                     <h4 className="text-sm font-bold text-indigo-300 mb-2 flex items-center">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 018 0v2M9 17a4 4 0 01-8 0v-2a4 4 0 018 0v2zm0 0h8" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.341A8 8 0 016.343 2.257m12.728 13.084A8 8 0 012.257 6.343m17.171 8.998A8 8 0 016.343 21.743m12.728-13.084A8 8 0 0121.743 17.657M12 8v4m0 4h.01" />
                                         </svg>
                                         TEST CASES
                                         {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
