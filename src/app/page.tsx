@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { DiffItem, ApiResponse } from '@/types/api';
 import type { DiffCardRefMethods } from '@/types/diff';
 import { Listbox } from '@headlessui/react';
+import React from 'react';
 
 export default function Home() {
   // Replace useState with usePersistedState for state that should persist across refreshes
@@ -26,6 +27,10 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showInfo, setShowInfo] = useState(false);
   const infoRef = useRef<HTMLDivElement>(null);
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiAnswer, setAiAnswer] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   const diffCardRefs = useRef<Record<string, DiffCardRefMethods>>({});
 
@@ -159,6 +164,33 @@ export default function Home() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showInfo]);
 
+  async function handleAiSearch(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!aiQuery.trim()) return;
+    setAiLoading(true);
+    setAiError('');
+    setAiAnswer('');
+    try {
+      const res = await fetch('/api/ai-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: aiQuery,
+          owner,
+          repo,
+          diffs: diffs, // all loaded PR/diff data
+        }),
+      });
+      if (!res.ok) throw new Error('AI search failed');
+      const data = await res.json();
+      setAiAnswer(data.answer || 'No answer found.');
+    } catch (err: any) {
+      setAiError('Error: ' + (err.message || 'AI search failed'));
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   return (
     <main className="flex min-h-screen flex-col items-center p-4 sm:p-12 bg-zinc-900">
       <div className="max-w-4xl w-full">
@@ -267,7 +299,7 @@ export default function Home() {
                 />
               </div>
             </div>
-            <div className="flex justify-center space-x-4 mt-4">
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full max-w-2xl mx-auto mt-6 mb-2">
               <button
                 onClick={handleFetchClick}
                 disabled={isLoading}
@@ -305,8 +337,40 @@ export default function Home() {
                 Clear All
               </button>
             </div>
+            {/* AI-powered search bar moved below main controls */}
+            <form onSubmit={handleAiSearch} className="flex items-center gap-2 w-full max-w-2xl mx-auto mt-4 mb-2">
+              <div className="relative w-full">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  value={aiQuery}
+                  onChange={e => setAiQuery(e.target.value)}
+                  placeholder="Ask AI about PRs, diffs, or this repo..."
+                  className="w-full h-[36px] pl-10 pr-3 py-1 text-base rounded-lg bg-zinc-900 text-white border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-60" disabled={aiLoading}>
+                {aiLoading ? 'Asking...' : 'Ask AI'}
+              </button>
+            </form>
           </div>
         </div>
+
+        {aiAnswer && (
+          <div className="max-w-2xl mx-auto mb-4 bg-zinc-800 border border-blue-700/30 rounded-lg p-4 text-blue-200 text-base whitespace-pre-line">
+            <b>AI Answer:</b> {aiAnswer}
+          </div>
+        )}
+        {aiError && (
+          <div className="max-w-2xl mx-auto mb-4 bg-red-900/20 border border-red-800/30 rounded-lg p-4 text-red-300 text-base">
+            {aiError}
+          </div>
+        )}
 
         {/* Results Section */}
         <div className="border border-zinc-700/50 rounded-xl p-6 min-h-[300px] bg-zinc-800/50 backdrop-blur-sm shadow-xl">
