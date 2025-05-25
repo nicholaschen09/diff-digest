@@ -455,88 +455,92 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                 </div>
 
                 {isExpanded && (
-                    <div className="p-3 bg-zinc-900/70 border-b border-zinc-700/50 overflow-auto max-h-64 text-xs font-mono">
-                        {/* Diff search and copy controls - sticky at top of scroll area */}
-                        <div className="sticky top-0 z-10 bg-zinc-900/95 border-b border-zinc-700/50 shadow-sm flex items-center gap-2 py-2 px-4">
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                placeholder="Search diff..."
-                                className="w-full max-w-xs px-2 py-1 rounded bg-zinc-800 border border-zinc-600 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            <button
-                                onClick={handleCopyDiff}
-                                className="ml-2 px-2 py-1 rounded bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 text-white flex items-center gap-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                title="Copy diff to clipboard"
-                            >
-                                {copied ? (
-                                    <svg className="h-4 w-4 text-green-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                ) : (
-                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                                    </svg>
-                                )}
-                                <span>{copied ? 'Copied!' : 'Copy'}</span>
-                            </button>
-                        </div>
-                        {diffView === 'unified' ? (
-                            <div>
-                                {parseDiffUnifiedWithLineNumbers(diff).map((entry, i) => (
-                                    <div key={i} className="flex">
-                                        <span className="w-10 text-right pr-2 text-zinc-500 select-none">
-                                            {entry.left !== null && entry.right === null
-                                                ? entry.left
-                                                : entry.right
-                                            }
-                                        </span>
-                                        <span className={
-                                            entry.line.startsWith('-') && !entry.line.startsWith('---') ? 'text-red-300' :
-                                                entry.line.startsWith('+') && !entry.line.startsWith('+++') ? 'text-green-300' :
-                                                    'text-gray-300'
-                                        }>
-                                            {highlightMatches(entry.line, searchQuery)}
-                                        </span>
-                                    </div>
-                                ))}
+                    <>
+                        <h4 className="text-lg font-bold text-zinc-200 mb-2 mt-2 px-4">Git Diffs</h4>
+                        <div className="p-3 bg-zinc-900/70 border-b border-zinc-700/50 overflow-auto max-h-64 text-xs font-mono">
+                            {/* Diff search and copy controls - sticky at top of scroll area */}
+                            <div className="sticky top-0 z-10 bg-zinc-900/95 border-b border-zinc-700/50 shadow-sm flex items-center gap-2 py-2 px-4">
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    placeholder="Search diff..."
+                                    className="w-full max-w-xs px-2 py-1 rounded bg-zinc-800 border border-zinc-600 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <button
+                                    onClick={handleCopyDiff}
+                                    className="ml-2 px-2 py-1 rounded bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 text-white flex items-center gap-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    title="Copy diff to clipboard"
+                                >
+                                    {copied ? (
+                                        <svg className="h-4 w-4 text-green-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                                        </svg>
+                                    )}
+                                    <span>{copied ? 'Copied!' : 'Copy'}</span>
+                                </button>
                             </div>
-                        ) : (
-                            (() => {
-                                const { left, right } = parseDiffToSplitWithLineNumbers(diff);
-                                return (
-                                    <div className="flex w-full text-xs font-mono border border-zinc-700 rounded overflow-x-auto bg-zinc-900">
-                                        <div className="w-1/2 border-r border-zinc-700 p-2">
-                                            {left.map((entry, i) => (
-                                                <div key={i} className={entry.line ? (right[i].line ? 'text-gray-300' : 'bg-red-900/30 text-red-300') : 'bg-transparent flex'}>
-                                                    <span className="w-10 text-right pr-2 text-zinc-500 select-none">
-                                                        {entry.number !== null ? entry.number : ''}
-                                                    </span>
-                                                    <span>{highlightMatches(entry.line, searchQuery) || '\u00A0'}</span>
-                                                </div>
-                                            ))}
+                            {diffView === 'unified' ? (
+                                <div>
+                                    {parseDiffUnifiedWithLineNumbers(diff).map((entry, i) => (
+                                        <div key={i} className="flex">
+                                            <span className="w-10 text-right pr-2 text-zinc-500 select-none">
+                                                {entry.left !== null && entry.right === null
+                                                    ? entry.left
+                                                    : entry.right
+                                                }
+                                            </span>
+                                            <span className={
+                                                entry.line.startsWith('-') && !entry.line.startsWith('---') ? 'text-red-300' :
+                                                    entry.line.startsWith('+') && !entry.line.startsWith('+++') ? 'text-green-300' :
+                                                        'text-gray-300'
+                                            }>
+                                                {highlightMatches(entry.line, searchQuery)}
+                                            </span>
                                         </div>
-                                        <div className="w-1/2 p-2">
-                                            {right.map((entry, i) => (
-                                                <div key={i} className={entry.line ? (left[i].line ? 'text-gray-300' : 'bg-green-900/30 text-green-300') : 'bg-transparent flex'}>
-                                                    <span className="w-10 text-right pr-2 text-zinc-500 select-none">
-                                                        {entry.number !== null ? entry.number : ''}
-                                                    </span>
-                                                    <span>{highlightMatches(entry.line, searchQuery) || '\u00A0'}</span>
-                                                </div>
-                                            ))}
+                                    ))}
+                                </div>
+                            ) : (
+                                (() => {
+                                    const { left, right } = parseDiffToSplitWithLineNumbers(diff);
+                                    return (
+                                        <div className="flex w-full text-xs font-mono border border-zinc-700 rounded overflow-x-auto bg-zinc-900">
+                                            <div className="w-1/2 border-r border-zinc-700 p-2">
+                                                {left.map((entry, i) => (
+                                                    <div key={i} className={entry.line ? (right[i].line ? 'text-gray-300' : 'bg-red-900/30 text-red-300') : 'bg-transparent flex'}>
+                                                        <span className="w-10 text-right pr-2 text-zinc-500 select-none">
+                                                            {entry.number !== null ? entry.number : ''}
+                                                        </span>
+                                                        <span>{highlightMatches(entry.line, searchQuery) || '\u00A0'}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="w-1/2 p-2">
+                                                {right.map((entry, i) => (
+                                                    <div key={i} className={entry.line ? (left[i].line ? 'text-gray-300' : 'bg-green-900/30 text-green-300') : 'bg-transparent flex'}>
+                                                        <span className="w-10 text-right pr-2 text-zinc-500 select-none">
+                                                            {entry.number !== null ? entry.number : ''}
+                                                        </span>
+                                                        <span>{highlightMatches(entry.line, searchQuery) || '\u00A0'}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            })()
-                        )}
-                    </div>
+                                    );
+                                })()
+                            )}
+                        </div>
+                    </>
                 )}
 
                 {notes.isVisible && (
                     <div className="p-4">
+                        <h4 className="text-lg font-bold text-zinc-200 mb-4 mt-2">AI Summaries</h4>
                         {notes.streamProgress.error && (
                             <div className="mb-4 p-3 bg-red-900/20 border border-red-800/30 rounded-md">
                                 <p className="text-red-400 text-sm">{notes.streamProgress.error}</p>
