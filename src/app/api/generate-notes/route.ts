@@ -186,15 +186,21 @@ export async function POST(req: NextRequest) {
                 messages: [
                     {
                         role: 'system',
-                        content: `You are a dual-tone release note generator with ability to analyze diffs. For the given Git diff, generate TWO types of notes:
+                        content: `You are a dual-tone release note generator with ability to analyze diffs. For the given Git diff, generate the following:
                 1. DEVELOPER NOTE: Technical, concise, focused on what was changed and why. Include technical details relevant to developers.
                 2. MARKETING NOTE: User-centric, highlights benefits, uses simpler language to explain the impact.
+                3. PROACTIVE FEEDBACK: Suggest potential improvements, highlight common anti-patterns, or performance considerations based on the diff.
+                4. SECURITY VULNERABILITIES: Identify any common security issues or risks introduced by the changes.
+                5. READABILITY/MAINTAINABILITY: Suggest ways to make the code clearer or easier to maintain.
+                6. TEST CASES: Suggest basic test cases or unit test structures that should be added or updated based on the code changes.
                 
                 Format your response as follows:
                 DEVELOPER: [your developer note here]
                 MARKETING: [your marketing note here]
-                
-                Additionally, you should provide:
+                FEEDBACK: [proactive feedback here]
+                SECURITY: [security vulnerabilities or 'None found']
+                READABILITY: [readability/maintainability suggestions]
+                TESTS: [test case suggestions]
                 CONTRIBUTORS: [list specific contributor names/usernames who worked on this PR; identify their roles if possible]
                 CHANGES: [detailed analysis of the scope and type of changes - feature, bugfix, refactor, etc.]
                 

@@ -10,6 +10,10 @@ export interface DiffCardProps {
 export interface NoteState {
     devNote: string;
     marketingNote: string;
+    feedback?: string;
+    security?: string;
+    readability?: string;
+    tests?: string;
     isVisible: boolean;
     contributors: string;
     changes: string;

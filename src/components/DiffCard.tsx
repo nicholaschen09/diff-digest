@@ -198,13 +198,17 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
         // Helper function to parse and update notes state
         const parseAndUpdateNotes = (text: string) => {
             try {
-                const { devNote, marketingNote, contributors, changes } = parseNotes(text);
+                const { devNote, marketingNote, feedback, security, readability, tests, contributors, changes } = parseNotes(text);
 
                 // Update state with parsed values
                 setNotes(prev => ({
                     ...prev,
                     devNote,
                     marketingNote,
+                    feedback,
+                    security,
+                    readability,
+                    tests,
                     contributors,
                     changes,
                     isVisible: true
@@ -412,15 +416,13 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                             disabled={notes.streamProgress.isGenerating}
                             className={cn(
                                 buttonBaseStyle,
-                                notes.streamProgress.isGenerating
-                                    ? "bg-blue-700/70 text-white cursor-wait"
-                                    : "bg-blue-600 text-white hover:bg-blue-500",
-                                "w-full md:w-[140px]"
+                                "bg-green-600 text-white border border-green-600 h-[32px] px-3 text-sm font-medium rounded-lg transition-all hover:bg-green-500 whitespace-nowrap flex items-center",
+                                notes.streamProgress.isGenerating && "opacity-60 cursor-wait"
                             )}
                         >
                             {notes.streamProgress.isGenerating ? (
                                 <>
-                                    <svg className="animate-spin h-3.5 w-3.5 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <svg className="animate-spin h-3.5 w-3.5 mr-1 -mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
@@ -428,7 +430,7 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                 </>
                             ) : (
                                 <>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1 -mt-0.5" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                                     </svg>
                                     Generate Notes
@@ -440,10 +442,10 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                 onClick={handleCloseNotes}
                                 className={cn(
                                     buttonBaseStyle,
-                                    "bg-red-600 text-white hover:bg-red-500 w-full md:w-auto"
+                                    "bg-red-600 text-white border border-red-600 h-[32px] px-3 text-sm font-medium rounded-lg transition-all hover:bg-red-500 whitespace-nowrap flex items-center"
                                 )}
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1 -mt-0.5" viewBox="0 0 20 20" fill="currentColor">
                                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                                 </svg>
                                 Close Notes
@@ -453,88 +455,92 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                 </div>
 
                 {isExpanded && (
-                    <div className="p-3 bg-zinc-900/70 border-b border-zinc-700/50 overflow-auto max-h-64 text-xs font-mono">
-                        {/* Diff search and copy controls */}
-                        <div className="mb-2 flex items-center gap-2">
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                placeholder="Search diff..."
-                                className="w-full max-w-xs px-2 py-1 rounded bg-zinc-800 border border-zinc-600 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            <button
-                                onClick={handleCopyDiff}
-                                className="ml-2 px-2 py-1 rounded bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 text-white flex items-center gap-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                title="Copy diff to clipboard"
-                            >
-                                {copied ? (
-                                    <svg className="h-4 w-4 text-green-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                ) : (
-                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                                    </svg>
-                                )}
-                                <span>{copied ? 'Copied!' : 'Copy'}</span>
-                            </button>
-                        </div>
-                        {diffView === 'unified' ? (
-                            <div>
-                                {parseDiffUnifiedWithLineNumbers(diff).map((entry, i) => (
-                                    <div key={i} className="flex">
-                                        <span className="w-10 text-right pr-2 text-zinc-500 select-none">
-                                            {entry.left !== null ? entry.left : ''}
-                                        </span>
-                                        <span className="w-10 text-right pr-2 text-zinc-500 select-none">
-                                            {entry.right !== null ? entry.right : ''}
-                                        </span>
-                                        <span className={
-                                            entry.line.startsWith('-') && !entry.line.startsWith('---') ? 'text-red-300' :
-                                                entry.line.startsWith('+') && !entry.line.startsWith('+++') ? 'text-green-300' :
-                                                    'text-gray-300'
-                                        }>
-                                            {highlightMatches(entry.line, searchQuery)}
-                                        </span>
-                                    </div>
-                                ))}
+                    <>
+                        <h4 className="text-lg font-bold text-zinc-200 mb-2 mt-2 px-4">Git Diffs</h4>
+                        <div className="p-3 bg-zinc-900/70 border-b border-zinc-700/50 overflow-auto max-h-64 text-xs font-mono">
+                            {/* Diff search and copy controls - sticky at top of scroll area */}
+                            <div className="sticky top-0 z-10 bg-zinc-900/95 border-b border-zinc-700/50 shadow-sm flex items-center gap-2 py-2 px-4">
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    placeholder="Search diff..."
+                                    className="w-full max-w-xs px-2 py-1 rounded bg-zinc-800 border border-zinc-600 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <button
+                                    onClick={handleCopyDiff}
+                                    className="ml-2 px-2 py-1 rounded bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 text-white flex items-center gap-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    title="Copy diff to clipboard"
+                                >
+                                    {copied ? (
+                                        <svg className="h-4 w-4 text-green-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                                        </svg>
+                                    )}
+                                    <span>{copied ? 'Copied!' : 'Copy'}</span>
+                                </button>
                             </div>
-                        ) : (
-                            (() => {
-                                const { left, right } = parseDiffToSplitWithLineNumbers(diff);
-                                return (
-                                    <div className="flex w-full text-xs font-mono border border-zinc-700 rounded overflow-x-auto bg-zinc-900">
-                                        <div className="w-1/2 border-r border-zinc-700 p-2">
-                                            {left.map((entry, i) => (
-                                                <div key={i} className={entry.line ? (right[i].line ? 'text-gray-300' : 'bg-red-900/30 text-red-300') : 'bg-transparent flex'}>
-                                                    <span className="w-10 text-right pr-2 text-zinc-500 select-none">
-                                                        {entry.number !== null ? entry.number : ''}
-                                                    </span>
-                                                    <span>{highlightMatches(entry.line, searchQuery) || '\u00A0'}</span>
-                                                </div>
-                                            ))}
+                            {diffView === 'unified' ? (
+                                <div>
+                                    {parseDiffUnifiedWithLineNumbers(diff).map((entry, i) => (
+                                        <div key={i} className="flex">
+                                            <span className="w-10 text-right pr-2 text-zinc-500 select-none">
+                                                {entry.left !== null && entry.right === null
+                                                    ? entry.left
+                                                    : entry.right
+                                                }
+                                            </span>
+                                            <span className={
+                                                entry.line.startsWith('-') && !entry.line.startsWith('---') ? 'text-red-300' :
+                                                    entry.line.startsWith('+') && !entry.line.startsWith('+++') ? 'text-green-300' :
+                                                        'text-gray-300'
+                                            }>
+                                                {highlightMatches(entry.line, searchQuery)}
+                                            </span>
                                         </div>
-                                        <div className="w-1/2 p-2">
-                                            {right.map((entry, i) => (
-                                                <div key={i} className={entry.line ? (left[i].line ? 'text-gray-300' : 'bg-green-900/30 text-green-300') : 'bg-transparent flex'}>
-                                                    <span className="w-10 text-right pr-2 text-zinc-500 select-none">
-                                                        {entry.number !== null ? entry.number : ''}
-                                                    </span>
-                                                    <span>{highlightMatches(entry.line, searchQuery) || '\u00A0'}</span>
-                                                </div>
-                                            ))}
+                                    ))}
+                                </div>
+                            ) : (
+                                (() => {
+                                    const { left, right } = parseDiffToSplitWithLineNumbers(diff);
+                                    return (
+                                        <div className="flex w-full text-xs font-mono border border-zinc-700 rounded overflow-x-auto bg-zinc-900">
+                                            <div className="w-1/2 border-r border-zinc-700 p-2">
+                                                {left.map((entry, i) => (
+                                                    <div key={i} className={entry.line ? (right[i].line ? 'text-gray-300' : 'bg-red-900/30 text-red-300') : 'bg-transparent flex'}>
+                                                        <span className="w-10 text-right pr-2 text-zinc-500 select-none">
+                                                            {entry.number !== null ? entry.number : ''}
+                                                        </span>
+                                                        <span>{highlightMatches(entry.line, searchQuery) || '\u00A0'}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="w-1/2 p-2">
+                                                {right.map((entry, i) => (
+                                                    <div key={i} className={entry.line ? (left[i].line ? 'text-gray-300' : 'bg-green-900/30 text-green-300') : 'bg-transparent flex'}>
+                                                        <span className="w-10 text-right pr-2 text-zinc-500 select-none">
+                                                            {entry.number !== null ? entry.number : ''}
+                                                        </span>
+                                                        <span>{highlightMatches(entry.line, searchQuery) || '\u00A0'}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            })()
-                        )}
-                    </div>
+                                    );
+                                })()
+                            )}
+                        </div>
+                    </>
                 )}
 
                 {notes.isVisible && (
                     <div className="p-4">
+                        <h4 className="text-lg font-bold text-zinc-200 mb-4 mt-2">AI Summaries</h4>
                         {notes.streamProgress.error && (
                             <div className="mb-4 p-3 bg-red-900/20 border border-red-800/30 rounded-md">
                                 <p className="text-red-400 text-sm">{notes.streamProgress.error}</p>
@@ -565,6 +571,58 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                         {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
                                     </h4>
                                     <p className="text-gray-300 text-sm">{notes.marketingNote}</p>
+                                </div>
+                            )}
+
+                            {notes.feedback && (
+                                <div className="bg-cyan-900/10 border border-cyan-700/20 rounded-md p-3">
+                                    <h4 className="text-sm font-bold text-cyan-300 mb-2 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3a7 7 0 00-4.95 11.95c.2.2.3.48.25.76A2.99 2.99 0 0012 21a2.99 2.99 0 004.7-5.29.75.75 0 01.25-.76A7 7 0 0012 3zm0 0v1m0 16v1m-4-4h8" />
+                                        </svg>
+                                        FEEDBACK
+                                        {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                    </h4>
+                                    <p className="text-gray-300 text-sm">{notes.feedback}</p>
+                                </div>
+                            )}
+
+                            {notes.security && (
+                                <div className="bg-red-900/10 border border-red-700/20 rounded-md p-3">
+                                    <h4 className="text-sm font-bold text-red-300 mb-2 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l7 4v5c0 5.25-3.5 9.75-7 11-3.5-1.25-7-5.75-7-11V7l7-4zm0 4v4m0 4h.01" />
+                                        </svg>
+                                        SECURITY
+                                        {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                    </h4>
+                                    <p className="text-gray-300 text-sm">{notes.security}</p>
+                                </div>
+                            )}
+
+                            {notes.readability && (
+                                <div className="bg-yellow-900/10 border border-yellow-700/20 rounded-md p-3">
+                                    <h4 className="text-sm font-bold text-yellow-300 mb-2 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 20h9M12 4H3m9 0v16m0-16c-4.418 0-8 1.79-8 4v12c0 2.21 3.582 4 8 4s8-1.79 8-4V8c0-2.21-3.582-4-8-4z" />
+                                        </svg>
+                                        READABILITY
+                                        {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                    </h4>
+                                    <p className="text-gray-300 text-sm">{notes.readability}</p>
+                                </div>
+                            )}
+
+                            {notes.tests && (
+                                <div className="bg-indigo-900/10 border border-indigo-700/20 rounded-md p-3">
+                                    <h4 className="text-sm font-bold text-indigo-300 mb-2 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.341A8 8 0 016.343 2.257m12.728 13.084A8 8 0 012.257 6.343m17.171 8.998A8 8 0 016.343 21.743m12.728-13.084A8 8 0 0121.743 17.657M12 8v4m0 4h.01" />
+                                        </svg>
+                                        TEST CASES
+                                        {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                    </h4>
+                                    <p className="text-gray-300 text-sm">{notes.tests}</p>
                                 </div>
                             )}
 
