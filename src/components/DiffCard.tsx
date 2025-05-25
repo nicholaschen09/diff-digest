@@ -454,8 +454,8 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
 
                 {isExpanded && (
                     <div className="p-3 bg-zinc-900/70 border-b border-zinc-700/50 overflow-auto max-h-64 text-xs font-mono">
-                        {/* Diff search and copy controls */}
-                        <div className="mb-2 flex items-center gap-2">
+                        {/* Diff search and copy controls - sticky at top of scroll area */}
+                        <div className="sticky top-0 z-10 bg-zinc-900/95 border-b border-zinc-700/50 shadow-sm flex items-center gap-2 py-2 px-4">
                             <input
                                 type="text"
                                 value={searchQuery}
