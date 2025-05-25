@@ -32,6 +32,7 @@ export default function Home() {
   const [aiAnswer, setAiAnswer] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [totalMergedCount, setTotalMergedCount] = useState<number | null>(null);
 
   const diffCardRefs = useRef<Record<string, DiffCardRefMethods>>({});
 
@@ -95,6 +96,7 @@ export default function Home() {
       });
       setCurrentPage(data.currentPage);
       setNextPage(data.nextPage);
+      setTotalMergedCount(data.totalMergedCount ?? null);
       if (!initialFetchDone) setInitialFetchDone(true);
     } catch (err: unknown) {
       setError(
@@ -103,6 +105,7 @@ export default function Home() {
       // Clear diffs on error to prevent showing stale data
       if (pageNum === 1) {
         setDiffs([]);
+        setTotalMergedCount(null);
       }
     } finally {
       setIsLoading(false);
@@ -379,7 +382,7 @@ export default function Home() {
         </div>
 
         {/* PR Stats Section */}
-        <PRStats diffs={diffs} />
+        <PRStats diffs={diffs} totalMergedCount={totalMergedCount} />
         {/* Results Section */}
         <div className="border border-zinc-700/50 rounded-xl p-6 min-h-[300px] bg-zinc-800/50 backdrop-blur-sm shadow-xl">
           <h2 className="text-2xl font-semibold mb-2 text-white border-b border-zinc-700/50 pb-3 flex items-center justify-between">

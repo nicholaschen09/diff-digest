@@ -9,6 +9,7 @@ interface DiffItem {
 
 interface PRStatsProps {
     diffs: DiffItem[];
+    totalMergedCount?: number | null;
 }
 
 function getLanguages(diffs: DiffItem[]) {
@@ -30,8 +31,8 @@ function getLanguages(diffs: DiffItem[]) {
     return sorted.slice(0, 3); // Top 3 languages
 }
 
-const PRStats: React.FC<PRStatsProps> = ({ diffs }) => {
-    const numPRs = diffs.length;
+const PRStats: React.FC<PRStatsProps> = ({ diffs, totalMergedCount }) => {
+    const numPRs = typeof totalMergedCount === 'number' ? totalMergedCount : diffs.length;
     const topLanguages = getLanguages(diffs);
 
     return (
