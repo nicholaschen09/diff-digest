@@ -198,13 +198,17 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
         // Helper function to parse and update notes state
         const parseAndUpdateNotes = (text: string) => {
             try {
-                const { devNote, marketingNote, contributors, changes } = parseNotes(text);
+                const { devNote, marketingNote, feedback, security, readability, tests, contributors, changes } = parseNotes(text);
 
                 // Update state with parsed values
                 setNotes(prev => ({
                     ...prev,
                     devNote,
                     marketingNote,
+                    feedback,
+                    security,
+                    readability,
+                    tests,
                     contributors,
                     changes,
                     isVisible: true
@@ -563,6 +567,58 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                         {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
                                     </h4>
                                     <p className="text-gray-300 text-sm">{notes.marketingNote}</p>
+                                </div>
+                            )}
+
+                            {notes.feedback && (
+                                <div className="bg-cyan-900/10 border border-cyan-700/20 rounded-md p-3">
+                                    <h4 className="text-sm font-bold text-cyan-300 mb-2 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01" />
+                                        </svg>
+                                        FEEDBACK
+                                        {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                    </h4>
+                                    <p className="text-gray-300 text-sm">{notes.feedback}</p>
+                                </div>
+                            )}
+
+                            {notes.security && (
+                                <div className="bg-red-900/10 border border-red-700/20 rounded-md p-3">
+                                    <h4 className="text-sm font-bold text-red-300 mb-2 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+                                        </svg>
+                                        SECURITY
+                                        {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                    </h4>
+                                    <p className="text-gray-300 text-sm">{notes.security}</p>
+                                </div>
+                            )}
+
+                            {notes.readability && (
+                                <div className="bg-yellow-900/10 border border-yellow-700/20 rounded-md p-3">
+                                    <h4 className="text-sm font-bold text-yellow-300 mb-2 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        READABILITY
+                                        {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                    </h4>
+                                    <p className="text-gray-300 text-sm">{notes.readability}</p>
+                                </div>
+                            )}
+
+                            {notes.tests && (
+                                <div className="bg-indigo-900/10 border border-indigo-700/20 rounded-md p-3">
+                                    <h4 className="text-sm font-bold text-indigo-300 mb-2 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 018 0v2M9 17a4 4 0 01-8 0v-2a4 4 0 018 0v2zm0 0h8" />
+                                        </svg>
+                                        TEST CASES
+                                        {notes.streamProgress.isGenerating && <span className="ml-2 animate-pulse">•</span>}
+                                    </h4>
+                                    <p className="text-gray-300 text-sm">{notes.tests}</p>
                                 </div>
                             )}
 
