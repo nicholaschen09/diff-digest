@@ -41,25 +41,29 @@ function getTopContributors(diffs: DiffItem[]) {
     return sorted.slice(0, 5); // Top 5
 }
 
-function getMostActiveWeek(diffs: DiffItem[]) {
-    // If merged_at is available, group by week
-    const weekCount: Record<string, number> = {};
+function getLanguages(diffs: DiffItem[]) {
+    const langCount: Record<string, number> = {};
+    const extToLang: Record<string, string> = {
+        js: 'JavaScript', ts: 'TypeScript', py: 'Python', java: 'Java', rb: 'Ruby', go: 'Go', rs: 'Rust', cpp: 'C++', c: 'C', cs: 'C#', php: 'PHP', swift: 'Swift', kt: 'Kotlin', m: 'Objective-C', scala: 'Scala', sh: 'Shell', md: 'Markdown', json: 'JSON', yml: 'YAML', yaml: 'YAML', html: 'HTML', css: 'CSS', scss: 'SCSS', less: 'LESS', vue: 'Vue', svelte: 'Svelte', dart: 'Dart', xml: 'XML', txt: 'Text', lock: 'Lockfile', toml: 'TOML', ini: 'INI', dockerfile: 'Dockerfile', makefile: 'Makefile', bat: 'Batch', ps1: 'PowerShell', sql: 'SQL', pl: 'Perl', r: 'R', jl: 'Julia', lua: 'Lua', groovy: 'Groovy', gradle: 'Gradle', coffee: 'CoffeeScript', elm: 'Elm', ex: 'Elixir', exs: 'Elixir', erl: 'Erlang', hs: 'Haskell', ml: 'OCaml', clj: 'Clojure', cljs: 'ClojureScript', fs: 'F#', fsx: 'F#', vb: 'VB.NET', vbs: 'VBScript', pas: 'Pascal', asm: 'Assembly', sol: 'Solidity', zig: 'Zig', nim: 'Nim', dart: 'Dart', groq: 'Groq', proto: 'Protobuf', avro: 'Avro', thrift: 'Thrift', csv: 'CSV', tsv: 'TSV', conf: 'Config', cfg: 'Config', env: 'Env', sample: 'Sample', example: 'Example', test: 'Test', spec: 'Spec', snap: 'Snapshot', story: 'Story', storybook: 'Storybook', feature: 'Feature', cucumber: 'Cucumber', cucumberjs: 'CucumberJS', cucumberjava: 'CucumberJava', cucumberruby: 'CucumberRuby', cucumberpython: 'CucumberPython', cucumberc: 'CucumberC', cucumbercpp: 'CucumberC++', cucumbergo: 'CucumberGo', cucumberphp: 'CucumberPHP', cucumberperl: 'CucumberPerl', cucumberdotnet: 'Cucumber.NET', cucumberscala: 'CucumberScala', cucumbergroovy: 'CucumberGroovy', cucumberkotlin: 'CucumberKotlin', cucumberswift: 'CucumberSwift', cucumberdart: 'CucumberDart', cucumberzig: 'CucumberZig', cucumbernim: 'CucumberNim', cucumberelixir: 'CucumberElixir', cucumbererlang: 'CucumberErlang', cucumberhaskell: 'CucumberHaskell', cucumberocaml: 'CucumberOCaml', cucumberclojure: 'CucumberClojure', cucumberfsharp: 'CucumberF#', cucumbervb: 'CucumberVB', cucumberpascal: 'CucumberPascal', cucumberasm: 'CucumberAssembly', cucumberproto: 'CucumberProtobuf', cucumberavro: 'CucumberAvro', cucumberthrift: 'CucumberThrift', cucumbercsv: 'CucumberCSV', cucumbertsv: 'CucumberTSV', cucumberconf: 'CucumberConfig', cucumbercfg: 'CucumberConfig', cucumberenv: 'CucumberEnv', cucumbersample: 'CucumberSample', cucumberexample: 'CucumberExample', c: 'C', h: 'C Header', hpp: 'C++ Header', hxx: 'C++ Header', hpp: 'C++ Header', hxx: 'C++ Header', cc: 'C++', hh: 'C++ Header', mm: 'Objective-C++', m: 'Objective-C', S: 'Assembly', s: 'Assembly', asm: 'Assembly', inc: 'Include', mak: 'Makefile', mk: 'Makefile', cmake: 'CMake', go: 'Go', mod: 'Go Mod', sum: 'Go Sum', rs: 'Rust', toml: 'TOML', cargo: 'Cargo', lock: 'Lockfile', js: 'JavaScript', jsx: 'JavaScript', ts: 'TypeScript', tsx: 'TypeScript', vue: 'Vue', svelte: 'Svelte', dart: 'Dart', groovy: 'Groovy', gradle: 'Gradle', coffee: 'CoffeeScript', elm: 'Elm', ex: 'Elixir', exs: 'Elixir', erl: 'Erlang', hs: 'Haskell', ml: 'OCaml', clj: 'Clojure', cljs: 'ClojureScript', fs: 'F#', fsx: 'F#', vb: 'VB.NET', vbs: 'VBScript', pas: 'Pascal', asm: 'Assembly', sol: 'Solidity', zig: 'Zig', nim: 'Nim', proto: 'Protobuf', avro: 'Avro', thrift: 'Thrift', csv: 'CSV', tsv: 'TSV', conf: 'Config', cfg: 'Config', env: 'Env', sample: 'Sample', example: 'Example', test: 'Test', spec: 'Spec', snap: 'Snapshot', story: 'Story', storybook: 'Storybook', feature: 'Feature', cucumber: 'Cucumber', cucumberjs: 'CucumberJS', cucumberjava: 'CucumberJava', cucumberruby: 'CucumberRuby', cucumberpython: 'CucumberPython', cucumberc: 'CucumberC', cucumbercpp: 'CucumberC++', cucumbergo: 'CucumberGo', cucumberphp: 'CucumberPHP', cucumberperl: 'CucumberPerl', cucumberdotnet: 'Cucumber.NET', cucumberscala: 'CucumberScala', cucumbergroovy: 'CucumberGroovy', cucumberkotlin: 'CucumberKotlin', cucumberswift: 'CucumberSwift', cucumberdart: 'CucumberDart', cucumberzig: 'CucumberZig', cucumbernim: 'CucumberNim', cucumberelixir: 'CucumberElixir', cucumbererlang: 'CucumberErlang', cucumberhaskell: 'CucumberHaskell', cucumberocaml: 'CucumberOCaml', cucumberclojure: 'CucumberClojure', cucumberfsharp: 'CucumberF#', cucumbervb: 'CucumberVB', cucumberpascal: 'CucumberPascal', cucumberasm: 'CucumberAssembly', cucumberproto: 'CucumberProtobuf', cucumberavro: 'CucumberAvro', cucumberthrift: 'CucumberThrift', cucumbercsv: 'CucumberCSV', cucumbertsv: 'CucumberTSV', cucumberconf: 'CucumberConfig', cucumbercfg: 'CucumberConfig', cucumberenv: 'CucumberEnv', cucumbersample: 'CucumberSample', cucumberexample: 'CucumberExample'
+    };
     for (const diff of diffs) {
-        if (diff.merged_at) {
-            const date = new Date(diff.merged_at);
-            // Get year-week string
-            const week = `${date.getFullYear()}-W${Math.ceil((date.getDate() + 1 - date.getDay()) / 7)}`;
-            weekCount[week] = (weekCount[week] || 0) + 1;
+        // Find all file paths in the diff header lines (--- a/file.ext, +++ b/file.ext)
+        const fileRegex = /[ab]\/(.+?)\.(\w+)/g;
+        let match;
+        while ((match = fileRegex.exec(diff.diff)) !== null) {
+            const ext = match[2].toLowerCase();
+            const lang = extToLang[ext] || ext.toUpperCase();
+            langCount[lang] = (langCount[lang] || 0) + 1;
         }
     }
-    const mostActive = Object.entries(weekCount).sort((a, b) => b[1] - a[1])[0];
-    return mostActive ? `${mostActive[0]} (${mostActive[1]} PRs)` : "N/A";
+    const sorted = Object.entries(langCount).sort((a, b) => b[1] - a[1]);
+    return sorted.slice(0, 3); // Top 3 languages
 }
 
 const PRStats: React.FC<PRStatsProps> = ({ diffs }) => {
     const numPRs = diffs.length;
     const topContributors = getTopContributors(diffs);
-    const mostActiveWeek = getMostActiveWeek(diffs);
+    const topLanguages = getLanguages(diffs);
 
     return (
         <div className="max-w-2xl mx-auto mb-6 mt-2 bg-zinc-800 border border-blue-700/30 rounded-lg p-4 text-blue-100 text-base">
@@ -82,7 +86,16 @@ const PRStats: React.FC<PRStatsProps> = ({ diffs }) => {
                     )}
                 </div>
                 <div>
-                    <span className="font-semibold">Most active week:</span> {mostActiveWeek}
+                    <span className="font-semibold">Languages:</span>{" "}
+                    {topLanguages.length > 0 ? (
+                        topLanguages.map(([lang, count]) => (
+                            <span key={lang} className="inline-flex items-center bg-blue-900/30 rounded-full px-2.5 py-0.5 text-xs font-medium text-blue-100 mr-2 mb-1">
+                                {lang} x{count}
+                            </span>
+                        ))
+                    ) : (
+                        <span className="text-gray-400 ml-1">No language data</span>
+                    )}
                 </div>
             </div>
         </div>

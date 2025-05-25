@@ -358,7 +358,7 @@ export default function Home() {
             </form>
             {aiAnswer && (
               <div className="max-w-2xl mx-auto -mb-2 mt-4 bg-zinc-800 border border-blue-700/30 rounded-lg p-4 text-blue-200 text-base whitespace-pre-line">
-                <b>AI Answer:</b> {aiAnswer}
+                {aiAnswer}
               </div>
             )}
             {aiError && (
