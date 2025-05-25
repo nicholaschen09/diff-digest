@@ -412,10 +412,8 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                             disabled={notes.streamProgress.isGenerating}
                             className={cn(
                                 buttonBaseStyle,
-                                notes.streamProgress.isGenerating
-                                    ? "bg-blue-700/70 text-white cursor-wait"
-                                    : "bg-blue-600 text-white hover:bg-blue-500",
-                                "w-full md:w-[140px]"
+                                "bg-green-600 text-white border border-green-600 h-[32px] px-3 text-base font-medium rounded-lg transition-all hover:bg-green-500",
+                                notes.streamProgress.isGenerating && "opacity-60 cursor-wait"
                             )}
                         >
                             {notes.streamProgress.isGenerating ? (
@@ -440,7 +438,7 @@ export const DiffCard = forwardRef<{ generateNotes: () => Promise<void>; closeNo
                                 onClick={handleCloseNotes}
                                 className={cn(
                                     buttonBaseStyle,
-                                    "bg-red-600 text-white hover:bg-red-500 w-full md:w-auto"
+                                    "bg-red-600 text-white border border-red-600 h-[32px] px-3 text-base font-medium rounded-lg transition-all hover:bg-red-500"
                                 )}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
