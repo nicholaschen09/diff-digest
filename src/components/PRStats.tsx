@@ -38,25 +38,25 @@ const PRStats: React.FC<PRStatsProps> = ({ diffs, totalMergedCount }) => {
     return (
         <div className="max-w-4xl mx-auto mb-6 mt-2 bg-zinc-800 border border-blue-700/30 rounded-lg p-4 text-blue-100 text-base">
             <h3 className="text-lg font-bold mb-2 text-blue-200">PR Stats</h3>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-8 gap-2 w-full">
-                <div className="flex flex-row items-center justify-between w-full">
-                    <div className="flex items-center">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-8 gap-4 w-full">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-2">
+                    <div className="flex items-center min-w-[120px]">
                         <span className="font-semibold">PRs merged:</span>
                         <span className="ml-2">{numPRs}</span>
                     </div>
-                    <div className="flex items-center flex-wrap gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center">
                         <span className="font-semibold mr-2">Languages:</span>
-                        {topLanguages.length > 0 ? (
-                            <span>
-                                {topLanguages.map(([lang, count], idx) => (
+                        <span className="break-words">
+                            {topLanguages.length > 0 ? (
+                                topLanguages.map(([lang, count], idx) => (
                                     <span key={lang}>
                                         {lang} ({count}){idx < topLanguages.length - 1 ? ', ' : ''}
                                     </span>
-                                ))}
-                            </span>
-                        ) : (
-                            <span className="text-gray-400 ml-1">No language data</span>
-                        )}
+                                ))
+                            ) : (
+                                <span className="text-gray-400 ml-1">No language data</span>
+                            )}
+                        </span>
                     </div>
                 </div>
             </div>
