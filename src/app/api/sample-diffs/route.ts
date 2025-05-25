@@ -127,6 +127,26 @@ export async function GET(request: Request) {
         // Filter for merged PRs
         const mergedPrs = closedPrs.filter((pr: { merged_at: string | null }) => pr.merged_at);
 
+        // Fetch total merged PR count (all pages)
+        let totalMergedCount = 0;
+        let pageNum = 1;
+        let keepGoing = true;
+        while (keepGoing) {
+            const { data: prs } = await octokit.pulls.list({
+                owner,
+                repo,
+                state: 'closed',
+                per_page: 100,
+                page: pageNum,
+                sort: 'created',
+                direction,
+            });
+            const merged = prs.filter((pr: { merged_at: string | null }) => pr.merged_at);
+            totalMergedCount += merged.length;
+            if (prs.length < 100) keepGoing = false;
+            else pageNum++;
+        }
+
         // Fetch diffs for each merged PR in parallel
         const diffsPromises = mergedPrs.map(async (pr: { number: number; title: string; html_url: string }) => {
             try {
@@ -171,7 +191,8 @@ export async function GET(request: Request) {
             diffs: diffResults,
             nextPage: nextPage,
             currentPage: page,
-            perPage: perPage
+            perPage: perPage,
+            totalMergedCount: totalMergedCount
         });
     } catch (error: any) {
         console.error('Error fetching data from GitHub:', error);

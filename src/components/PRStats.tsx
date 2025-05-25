@@ -43,14 +43,16 @@ const PRStats: React.FC<PRStatsProps> = ({ diffs }) => {
                         <span className="font-semibold">PRs merged:</span>
                         <span className="ml-2">{numPRs}</span>
                     </div>
-                    <div className="flex items-center">
+                    <div className="flex items-center flex-wrap gap-2">
                         <span className="font-semibold mr-2">Languages:</span>
                         {topLanguages.length > 0 ? (
-                            topLanguages.map(([lang, count]) => (
-                                <span key={lang} className="inline-flex items-center bg-blue-900/30 rounded-full px-2.5 py-0.5 text-xs font-medium text-blue-100 mr-2 mb-1">
-                                    {lang} x{count}
-                                </span>
-                            ))
+                            <span>
+                                {topLanguages.map(([lang, count], idx) => (
+                                    <span key={lang}>
+                                        {lang} ({count}){idx < topLanguages.length - 1 ? ', ' : ''}
+                                    </span>
+                                ))}
+                            </span>
                         ) : (
                             <span className="text-gray-400 ml-1">No language data</span>
                         )}
