@@ -1,50 +1,20 @@
 import React from "react";
 
-interface Contributor {
-    login: string;
-    name: string;
-    role: string;
-    avatar_url: string;
-}
-
 interface DiffItem {
     id: string;
     description: string;
     diff: string;
     url: string;
-    // Optionally, you may have notes or contributorData attached by DiffCard
-    notes?: {
-        contributorData?: Contributor[];
-    };
-    // Optionally, you may have merged_at if you extend the backend
-    merged_at?: string;
 }
 
 interface PRStatsProps {
     diffs: DiffItem[];
 }
 
-function getTopContributors(diffs: DiffItem[]) {
-    const contributorCount: Record<string, { contributor: Contributor; count: number }> = {};
-    for (const diff of diffs) {
-        const contributors = diff.notes?.contributorData;
-        if (contributors && contributors.length > 0) {
-            for (const c of contributors) {
-                if (!contributorCount[c.login]) {
-                    contributorCount[c.login] = { contributor: c, count: 0 };
-                }
-                contributorCount[c.login].count++;
-            }
-        }
-    }
-    const sorted = Object.values(contributorCount).sort((a, b) => b.count - a.count);
-    return sorted.slice(0, 5); // Top 5
-}
-
 function getLanguages(diffs: DiffItem[]) {
     const langCount: Record<string, number> = {};
     const extToLang: Record<string, string> = {
-        js: 'JavaScript', ts: 'TypeScript', py: 'Python', java: 'Java', rb: 'Ruby', go: 'Go', rs: 'Rust', cpp: 'C++', c: 'C', cs: 'C#', php: 'PHP', swift: 'Swift', kt: 'Kotlin', m: 'Objective-C', scala: 'Scala', sh: 'Shell', md: 'Markdown', json: 'JSON', yml: 'YAML', yaml: 'YAML', html: 'HTML', css: 'CSS', scss: 'SCSS', less: 'LESS', vue: 'Vue', svelte: 'Svelte', dart: 'Dart', xml: 'XML', txt: 'Text', lock: 'Lockfile', toml: 'TOML', ini: 'INI', dockerfile: 'Dockerfile', makefile: 'Makefile', bat: 'Batch', ps1: 'PowerShell', sql: 'SQL', pl: 'Perl', r: 'R', jl: 'Julia', lua: 'Lua', groovy: 'Groovy', gradle: 'Gradle', coffee: 'CoffeeScript', elm: 'Elm', ex: 'Elixir', exs: 'Elixir', erl: 'Erlang', hs: 'Haskell', ml: 'OCaml', clj: 'Clojure', cljs: 'ClojureScript', fs: 'F#', fsx: 'F#', vb: 'VB.NET', vbs: 'VBScript', pas: 'Pascal', asm: 'Assembly', sol: 'Solidity', zig: 'Zig', nim: 'Nim', dart: 'Dart', groq: 'Groq', proto: 'Protobuf', avro: 'Avro', thrift: 'Thrift', csv: 'CSV', tsv: 'TSV', conf: 'Config', cfg: 'Config', env: 'Env', sample: 'Sample', example: 'Example', test: 'Test', spec: 'Spec', snap: 'Snapshot', story: 'Story', storybook: 'Storybook', feature: 'Feature', cucumber: 'Cucumber', cucumberjs: 'CucumberJS', cucumberjava: 'CucumberJava', cucumberruby: 'CucumberRuby', cucumberpython: 'CucumberPython', cucumberc: 'CucumberC', cucumbercpp: 'CucumberC++', cucumbergo: 'CucumberGo', cucumberphp: 'CucumberPHP', cucumberperl: 'CucumberPerl', cucumberdotnet: 'Cucumber.NET', cucumberscala: 'CucumberScala', cucumbergroovy: 'CucumberGroovy', cucumberkotlin: 'CucumberKotlin', cucumberswift: 'CucumberSwift', cucumberdart: 'CucumberDart', cucumberzig: 'CucumberZig', cucumbernim: 'CucumberNim', cucumberelixir: 'CucumberElixir', cucumbererlang: 'CucumberErlang', cucumberhaskell: 'CucumberHaskell', cucumberocaml: 'CucumberOCaml', cucumberclojure: 'CucumberClojure', cucumberfsharp: 'CucumberF#', cucumbervb: 'CucumberVB', cucumberpascal: 'CucumberPascal', cucumberasm: 'CucumberAssembly', cucumberproto: 'CucumberProtobuf', cucumberavro: 'CucumberAvro', cucumberthrift: 'CucumberThrift', cucumbercsv: 'CucumberCSV', cucumbertsv: 'CucumberTSV', cucumberconf: 'CucumberConfig', cucumbercfg: 'CucumberConfig', cucumberenv: 'CucumberEnv', cucumbersample: 'CucumberSample', cucumberexample: 'CucumberExample', c: 'C', h: 'C Header', hpp: 'C++ Header', hxx: 'C++ Header', hpp: 'C++ Header', hxx: 'C++ Header', cc: 'C++', hh: 'C++ Header', mm: 'Objective-C++', m: 'Objective-C', S: 'Assembly', s: 'Assembly', asm: 'Assembly', inc: 'Include', mak: 'Makefile', mk: 'Makefile', cmake: 'CMake', go: 'Go', mod: 'Go Mod', sum: 'Go Sum', rs: 'Rust', toml: 'TOML', cargo: 'Cargo', lock: 'Lockfile', js: 'JavaScript', jsx: 'JavaScript', ts: 'TypeScript', tsx: 'TypeScript', vue: 'Vue', svelte: 'Svelte', dart: 'Dart', groovy: 'Groovy', gradle: 'Gradle', coffee: 'CoffeeScript', elm: 'Elm', ex: 'Elixir', exs: 'Elixir', erl: 'Erlang', hs: 'Haskell', ml: 'OCaml', clj: 'Clojure', cljs: 'ClojureScript', fs: 'F#', fsx: 'F#', vb: 'VB.NET', vbs: 'VBScript', pas: 'Pascal', asm: 'Assembly', sol: 'Solidity', zig: 'Zig', nim: 'Nim', proto: 'Protobuf', avro: 'Avro', thrift: 'Thrift', csv: 'CSV', tsv: 'TSV', conf: 'Config', cfg: 'Config', env: 'Env', sample: 'Sample', example: 'Example', test: 'Test', spec: 'Spec', snap: 'Snapshot', story: 'Story', storybook: 'Storybook', feature: 'Feature', cucumber: 'Cucumber', cucumberjs: 'CucumberJS', cucumberjava: 'CucumberJava', cucumberruby: 'CucumberRuby', cucumberpython: 'CucumberPython', cucumberc: 'CucumberC', cucumbercpp: 'CucumberC++', cucumbergo: 'CucumberGo', cucumberphp: 'CucumberPHP', cucumberperl: 'CucumberPerl', cucumberdotnet: 'Cucumber.NET', cucumberscala: 'CucumberScala', cucumbergroovy: 'CucumberGroovy', cucumberkotlin: 'CucumberKotlin', cucumberswift: 'CucumberSwift', cucumberdart: 'CucumberDart', cucumberzig: 'CucumberZig', cucumbernim: 'CucumberNim', cucumberelixir: 'CucumberElixir', cucumbererlang: 'CucumberErlang', cucumberhaskell: 'CucumberHaskell', cucumberocaml: 'CucumberOCaml', cucumberclojure: 'CucumberClojure', cucumberfsharp: 'CucumberF#', cucumbervb: 'CucumberVB', cucumberpascal: 'CucumberPascal', cucumberasm: 'CucumberAssembly', cucumberproto: 'CucumberProtobuf', cucumberavro: 'CucumberAvro', cucumberthrift: 'CucumberThrift', cucumbercsv: 'CucumberCSV', cucumbertsv: 'CucumberTSV', cucumberconf: 'CucumberConfig', cucumbercfg: 'CucumberConfig', cucumberenv: 'CucumberEnv', cucumbersample: 'CucumberSample', cucumberexample: 'CucumberExample'
+        js: 'JavaScript', ts: 'TypeScript', py: 'Python', java: 'Java', rb: 'Ruby', go: 'Go', rs: 'Rust', cpp: 'C++', c: 'C', cs: 'C#', php: 'PHP', swift: 'Swift', kt: 'Kotlin', m: 'Objective-C', scala: 'Scala', sh: 'Shell', md: 'Markdown', json: 'JSON', yml: 'YAML', yaml: 'YAML', html: 'HTML', css: 'CSS', scss: 'SCSS', less: 'LESS', vue: 'Vue', svelte: 'Svelte', dart: 'Dart', xml: 'XML', txt: 'Text', lock: 'Lockfile', toml: 'TOML', ini: 'INI', dockerfile: 'Dockerfile', makefile: 'Makefile', bat: 'Batch', ps1: 'PowerShell', sql: 'SQL', pl: 'Perl', r: 'R', jl: 'Julia', lua: 'Lua', groovy: 'Groovy', gradle: 'Gradle', coffee: 'CoffeeScript', elm: 'Elm', ex: 'Elixir', exs: 'Elixir', erl: 'Erlang', hs: 'Haskell', ml: 'OCaml', clj: 'Clojure', cljs: 'ClojureScript', fs: 'F#', fsx: 'F#', vb: 'VB.NET', vbs: 'VBScript', pas: 'Pascal', asm: 'Assembly', sol: 'Solidity', zig: 'Zig', nim: 'Nim', proto: 'Protobuf', avro: 'Avro', thrift: 'Thrift', csv: 'CSV', tsv: 'TSV', conf: 'Config', cfg: 'Config', env: 'Env', sample: 'Sample', example: 'Example', test: 'Test', spec: 'Spec', snap: 'Snapshot', story: 'Story', storybook: 'Storybook', feature: 'Feature'
     };
     for (const diff of diffs) {
         // Find all file paths in the diff header lines (--- a/file.ext, +++ b/file.ext)
@@ -62,7 +32,6 @@ function getLanguages(diffs: DiffItem[]) {
 
 const PRStats: React.FC<PRStatsProps> = ({ diffs }) => {
     const numPRs = diffs.length;
-    const topContributors = getTopContributors(diffs);
     const topLanguages = getLanguages(diffs);
 
     return (
@@ -71,19 +40,6 @@ const PRStats: React.FC<PRStatsProps> = ({ diffs }) => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-8 gap-2">
                 <div>
                     <span className="font-semibold">PRs merged:</span> {numPRs}
-                </div>
-                <div>
-                    <span className="font-semibold">Top contributors:</span>{" "}
-                    {topContributors.length > 0 ? (
-                        topContributors.map(({ contributor, count }, i) => (
-                            <span key={contributor.login} className="inline-flex items-center bg-blue-900/30 rounded-full px-2.5 py-0.5 text-xs font-medium text-blue-100 mr-2 mb-1">
-                                <img src={contributor.avatar_url} alt={contributor.login} className="w-4 h-4 rounded-full mr-1.5" />
-                                {contributor.name} (@{contributor.login}) x{count}
-                            </span>
-                        ))
-                    ) : (
-                        <span className="text-gray-400 ml-1">No contributor data</span>
-                    )}
                 </div>
                 <div>
                     <span className="font-semibold">Languages:</span>{" "}
