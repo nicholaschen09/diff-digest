@@ -354,9 +354,6 @@ export default function Home() {
                   className="w-full h-[36px] pl-10 pr-3 py-1 text-base rounded-lg bg-zinc-900 text-white border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-60" disabled={aiLoading}>
-                {aiLoading ? 'Asking...' : 'Ask AI'}
-              </button>
             </form>
           </div>
         </div>
