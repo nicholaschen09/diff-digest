@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import type { DiffItem, ApiResponse } from '@/types/api';
 import type { DiffCardRefMethods } from '@/types/diff';
 import { Listbox } from '@headlessui/react';
+import React from 'react';
+import PRStats from "@/components/PRStats";
 
 export default function Home() {
   // Replace useState with usePersistedState for state that should persist across refreshes
@@ -26,6 +28,11 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showInfo, setShowInfo] = useState(false);
   const infoRef = useRef<HTMLDivElement>(null);
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiAnswer, setAiAnswer] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [totalMergedCount, setTotalMergedCount] = useState<number | null>(null);
 
   const diffCardRefs = useRef<Record<string, DiffCardRefMethods>>({});
 
@@ -89,6 +96,7 @@ export default function Home() {
       });
       setCurrentPage(data.currentPage);
       setNextPage(data.nextPage);
+      setTotalMergedCount(data.totalMergedCount ?? null);
       if (!initialFetchDone) setInitialFetchDone(true);
     } catch (err: unknown) {
       setError(
@@ -97,6 +105,7 @@ export default function Home() {
       // Clear diffs on error to prevent showing stale data
       if (pageNum === 1) {
         setDiffs([]);
+        setTotalMergedCount(null);
       }
     } finally {
       setIsLoading(false);
@@ -159,6 +168,33 @@ export default function Home() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showInfo]);
 
+  async function handleAiSearch(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!aiQuery.trim()) return;
+    setAiLoading(true);
+    setAiError('');
+    setAiAnswer('');
+    try {
+      const res = await fetch('/api/ai-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: aiQuery,
+          owner,
+          repo,
+          diffs: diffs, // all loaded PR/diff data
+        }),
+      });
+      if (!res.ok) throw new Error('AI search failed');
+      const data = await res.json();
+      setAiAnswer(data.answer || 'No answer found.');
+    } catch (err: any) {
+      setAiError('Error: ' + (err.message || 'AI search failed'));
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   return (
     <main className="flex min-h-screen flex-col items-center p-4 sm:p-12 bg-zinc-900">
       <div className="max-w-4xl w-full">
@@ -171,24 +207,41 @@ export default function Home() {
           </p>
 
           {/* GitHub Repo URL Input Section */}
-          <div className="flex flex-col items-center mt-6 mb-2">
-            <label htmlFor="repoUrl" className="text-sm text-gray-400 mb-1">Paste GitHub Repository URL</label>
-            <input
-              id="repoUrl"
-              type="text"
-              value={repoUrl}
-              onChange={(e) => {
-                setRepoUrl(e.target.value);
-                // Try to parse the URL and set owner/repo if valid
-                const match = e.target.value.match(/github\.com\/([^\/]+)\/([^\/]+)(?:\.git)?/);
-                if (match) {
-                  setOwner(match[1]);
-                  setRepo(match[2].replace('.git', ''));
-                }
-              }}
-              placeholder="e.g., https://github.com/openai/openai-node"
-              className="px-4 py-2 border border-zinc-700 rounded-md bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full max-w-md"
-            />
+          <div className="flex flex-col sm:flex-row items-center mt-6 mb-2 gap-2 w-full max-w-md mx-auto">
+            <div className="flex-1 w-full">
+              <label htmlFor="repoUrl" className="text-sm text-gray-400 mb-1 block">Paste GitHub Repository URL</label>
+              <input
+                id="repoUrl"
+                type="text"
+                value={repoUrl}
+                onChange={(e) => {
+                  setRepoUrl(e.target.value);
+                  // Try to parse the URL and set owner/repo if valid
+                  const match = e.target.value.match(/github\.com\/([^\/]+)\/([^\/]+)(?:\.git)?/);
+                  if (match) {
+                    setOwner(match[1]);
+                    setRepo(match[2].replace('.git', ''));
+                  }
+                }}
+                placeholder="e.g., https://github.com/openai/openai-node"
+                className="px-4 py-2 border border-zinc-700 rounded-md bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+              />
+            </div>
+            {repoUrl.match(/github\.com\/[^\/]+\/[^\/]+/) && (
+              <a
+                href={repoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-200 hover:underline transition-colors text-base font-medium whitespace-nowrap mt-2 sm:mt-7 ml-0 sm:ml-4"
+                style={{ wordBreak: 'break-all' }}
+                aria-label="View repository on GitHub"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                  <path d="M12 0C5.37 0 0 5.373 0 12c0 5.303 3.438 9.8 8.207 11.387.6.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.419-1.305.763-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.824 1.102.824 2.222v3.293c0 .319.192.694.801.576C20.565 21.796 24 17.299 24 12c0-6.627-5.373-12-12-12z" />
+                </svg>
+                View on GitHub
+              </a>
+            )}
           </div>
         </div>
 
@@ -250,12 +303,12 @@ export default function Home() {
                 />
               </div>
             </div>
-            <div className="flex justify-center space-x-4 mt-4">
+            <div className="flex justify-center gap-4 w-full max-w-2xl mx-auto mt-6 mb-2">
               <button
                 onClick={handleFetchClick}
                 disabled={isLoading}
                 className={cn(
-                  "px-4 py-2 text-sm rounded-md transition-all flex items-center justify-center shadow-sm",
+                  "px-6 py-2 min-w-[140px] text-sm rounded-md transition-all flex items-center justify-center shadow-sm",
                   isLoading
                     ? "bg-blue-700/70 text-white cursor-wait"
                     : "bg-blue-600 text-white hover:bg-blue-500"
@@ -280,7 +333,7 @@ export default function Home() {
               </button>
               <button
                 onClick={clearAllState}
-                className="px-4 py-2 text-sm rounded-md transition-all flex items-center justify-center shadow-sm bg-red-600 text-white hover:bg-red-500"
+                className="px-6 py-2 min-w-[140px] text-sm rounded-md transition-all flex items-center justify-center shadow-sm bg-red-600 text-white hover:bg-red-500"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -288,9 +341,48 @@ export default function Home() {
                 Clear All
               </button>
             </div>
+            {/* AI-powered search bar moved below main controls */}
+            <form onSubmit={handleAiSearch} className="flex items-center gap-2 w-full max-w-4xl mx-auto mt-4 mb-2">
+              <div className="relative w-full">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  value={aiQuery}
+                  onChange={e => setAiQuery(e.target.value)}
+                  placeholder="Ask AI about PRs, diffs, or this repo..."
+                  className="w-full h-[36px] pl-10 pr-3 py-1 text-base rounded-lg bg-zinc-900 text-white border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </form>
+            {aiLoading && (
+              <div className="max-w-4xl mx-auto mt-4 mb-2 text-blue-300 text-base flex items-center gap-2 animate-pulse">
+                <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Thinking...
+              </div>
+            )}
+            {aiAnswer && (
+              <div className="max-w-4xl mx-auto -mb-2 mt-4 bg-zinc-800 border border-blue-700/30 rounded-lg p-4 text-blue-200 text-base whitespace-pre-line">
+                {aiAnswer}
+              </div>
+            )}
+            {aiError && (
+              <div className="max-w-2xl mx-auto mb-4 bg-red-900/20 border border-red-800/30 rounded-lg p-4 text-red-300 text-base">
+                {aiError}
+              </div>
+            )}
           </div>
         </div>
 
+        {/* PR Stats Section */}
+        <PRStats diffs={diffs} totalMergedCount={totalMergedCount} />
         {/* Results Section */}
         <div className="border border-zinc-700/50 rounded-xl p-6 min-h-[300px] bg-zinc-800/50 backdrop-blur-sm shadow-xl">
           <h2 className="text-2xl font-semibold mb-2 text-white border-b border-zinc-700/50 pb-3 flex items-center justify-between">
