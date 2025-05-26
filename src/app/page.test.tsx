@@ -4,7 +4,6 @@ import Page from './page';
 import { expect } from '@jest/globals';
 import { jest } from '@jest/globals';
 import '@testing-library/jest-dom';
-import '@testing-library/jest-dom/extend-expect';
 import { describe, it, beforeEach } from '@jest/globals';
 
 // Mock the fetch function

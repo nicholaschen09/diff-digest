@@ -20,14 +20,16 @@ describe('DiffCard', () => {
 
     it('calls generateNotes when the generate button is clicked', async () => {
         const mockGenerateNotes = jest.fn();
-        render(<DiffCard {...mockProps} ref={{ current: { generateNotes: mockGenerateNotes } }} />);
+        const mockCloseNotes = jest.fn();
+        render(<DiffCard {...mockProps} ref={{ current: { generateNotes: mockGenerateNotes, closeNotes: mockCloseNotes } }} />);
         fireEvent.click(screen.getByText('Generate Notes'));
         expect(mockGenerateNotes).toHaveBeenCalled();
     });
 
     it('calls closeNotes when the close button is clicked', () => {
+        const mockGenerateNotes = jest.fn();
         const mockCloseNotes = jest.fn();
-        render(<DiffCard {...mockProps} ref={{ current: { closeNotes: mockCloseNotes } }} />);
+        render(<DiffCard {...mockProps} ref={{ current: { generateNotes: mockGenerateNotes, closeNotes: mockCloseNotes } }} />);
         fireEvent.click(screen.getByText('Close'));
         expect(mockCloseNotes).toHaveBeenCalled();
     });
