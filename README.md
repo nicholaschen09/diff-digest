@@ -1,4 +1,7 @@
 # a0.dev – Take-Home Interview: Diff Digest
+![image](https://github.com/user-attachments/assets/c63f8e84-874b-4584-9618-75adfc8ba453)
+<img width="1045" alt="Screenshot 2025-05-28 at 1 09 10 AM" src="https://github.com/user-attachments/assets/6daeec9a-34c0-44b0-b2c2-105c624324e5" />
+
 
 **Challenge:** Build a web experience that turns Git diffs into live, dual-tone release notes.  
 **Time-box:** 24 hours from when you received the email
