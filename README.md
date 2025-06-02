@@ -74,17 +74,6 @@ OPENAI_API_KEY=your_openai_api_key
 
 ---
 
-## Challenge Details (for reference)
-
-<details>
-<summary>Click to expand original challenge instructions</summary>
-
-[Challenge instructions go here — you can keep the original text in a collapsible section.]
-
-</details>
-
----
-
 ## License
 
 MIT
