@@ -1,9 +1,7 @@
-import { OpenAI } from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY || '',
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // Function to parse GitHub repository URL
 function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
@@ -181,12 +179,9 @@ export async function POST(req: NextRequest) {
         const timeoutId = setTimeout(() => abortController.abort(), 30000); // 30-second timeout
 
         try {
-            const stream = await openai.chat.completions.create({
-                model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-                messages: [
-                    {
-                        role: 'system',
-                        content: `You are a dual-tone release note generator with ability to analyze diffs. For the given Git diff, generate the following:
+            const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-1.5-flash' });
+            
+            const prompt = `You are a dual-tone release note generator with ability to analyze diffs. For the given Git diff, generate the following:
                 1. DEVELOPER NOTE: Technical, concise, focused on what was changed and why. Include technical details relevant to developers.
                 2. MARKETING NOTE: User-centric, highlights benefits, uses simpler language to explain the impact.
                 3. PROACTIVE FEEDBACK: Suggest potential improvements, highlight common anti-patterns, or performance considerations based on the diff.
@@ -210,28 +205,21 @@ export async function POST(req: NextRequest) {
                 - Don't hallucinate features not evident in the diff
                 - For contributors, be specific with names - don't make up contributors if none are evident
                 - If you cannot determine what changed, say so honestly
-                - Do not include markdown formatting`
-                    },
-                    {
-                        role: 'user',
-                        content: `Generate release notes for this PR #${id}: "${description}"\n\nContext: ${issuesContext}\n\nContributors Context: ${contributorsContext}\n\nDiff:\n${diffContent}`
-                    }
-                ],
-                stream: true,
-                max_tokens: 1000, // Limit response size
-            }, {
-                signal: abortController.signal
-            });
+                - Do not include markdown formatting
+                
+Generate release notes for this PR #${id}: "${description}"\n\nContext: ${issuesContext}\n\nContributors Context: ${contributorsContext}\n\nDiff:\n${diffContent}`;
+            
+            const result = await model.generateContentStream(prompt);
 
             // Create a readable stream for the client
             const readableStream = new ReadableStream({
                 async start(controller) {
                     try {
-                        for await (const chunk of stream) {
-                            const content = chunk.choices[0]?.delta?.content || '';
-                            if (content) {
+                        for await (const chunk of result.stream) {
+                            const chunkText = chunk.text();
+                            if (chunkText) {
                                 // Send the content as it arrives
-                                controller.enqueue(new TextEncoder().encode(content));
+                                controller.enqueue(new TextEncoder().encode(chunkText));
                             }
                         }
                         controller.close();
@@ -268,7 +256,7 @@ export async function POST(req: NextRequest) {
             clearTimeout(timeoutId);
         }
     } catch (error) {
-        console.error('Error with OpenAI API:', error);
+        console.error('Error with Gemini API:', error);
         return NextResponse.json(
             {
                 error: 'Failed to generate release notes',
